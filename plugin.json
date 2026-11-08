@@ -3,7 +3,7 @@
   "name": "Atelier",
   "version": "1.1.2",
   "author": "NDesumeur",
-  "description": "L'IDE de NeoDex : projets, éditeur coloré, aperçu web instantané, console, bac à sable JavaScript, Python, modèles et outils pour créer, tester et valider tes plugins.",
+  "description": "L'environnement de développement de NeoDex : projets et fichiers, éditeur avec coloration, recherche dans tout le projet et raccourcis, aperçu web mis à jour en tapant, console, scripts JavaScript dans un bac à sable et Python avec celui de ton PC. Modèles de plugins prêts à tester dans un cadre isolé, validation de plugin.json et export en .zip pour publier.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "atelier",
