@@ -1,7 +1,7 @@
 {
   "id": "neodex.atelier",
   "name": "Atelier",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "author": "NDesumeur",
   "description": "L'environnement de développement de NeoDex : projets et fichiers, éditeur avec coloration, recherche dans tout le projet et raccourcis, aperçu web mis à jour en tapant, console, scripts JavaScript dans un bac à sable et Python avec celui de ton PC. Modèles de plugins prêts à tester dans un cadre isolé, validation de plugin.json et export en .zip pour publier.",
   "icon": "icon.png",
