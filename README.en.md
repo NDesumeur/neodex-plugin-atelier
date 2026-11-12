@@ -18,6 +18,21 @@ The development environment built into NeoDex: write web pages, JavaScript or Py
 - **Shift+Alt+F** formats the file (reformats JSON, removes extra spaces).
 - **Ctrl+P** opens a file or runs a command by name; **Ctrl+=** and **Ctrl+-** change the text size.
 - **Ctrl+S** saves.
+- **Autocomplete** as you type (or **Ctrl+Space**): keywords, snippets (`for`, `def`, `html5`…), the NeoDex API (`ctx.folder.read`…) and the names already written in the project.
+- **Problems** reported as you type: brackets or tags never closed, invalid JSON, colons forgotten in Python… The line lights up in red in the margin, and the bottom bar counts and lists them.
+- **Ctrl+Shift+O** shows the file outline (functions, classes, CSS rules, headings), **Ctrl+G** goes to a line, **F2** renames a name everywhere in the file. The matching bracket lights up.
+- **Ctrl+H** opens the file history: a version is kept at each Ctrl+S (15 at most), to compare with the current text and restore.
+- Markdown files get a live preview.
+
+## Opening a folder of your PC
+
+- **Open a folder**: pick a folder in the Windows dialog. Its files show on the left and are saved straight to it (`.git`, `node_modules`… folders are skipped).
+- Deleting a file moves it to the Windows **Recycle Bin**. **Close folder** removes it from the Workshop without touching its files, and **↻** reloads it.
+- **Git**: the branch, the changed files, each one compared with the last commit, and the commit with your message. To push or pull, type `git push` or `git pull` in the terminal.
+- **Terminal**: the console's **JavaScript / Terminal** button runs a PowerShell command in the folder, 60 seconds at most. **↑** and **↓** bring back previous commands.
+- Python runs directly in the folder.
+
+The Workshop only reaches the folders you picked yourself.
 
 ## Running (▶ or Ctrl+Enter)
 
@@ -37,7 +52,7 @@ Publishing itself (GitHub Release, signature and approval) happens outside the W
 
 ## Security
 
-Your code never runs inside NeoDex itself: it is always isolated and sees neither your data nor your tabs. Only running Python goes through the Workshop's system part, which requires full access.
+Your code never runs inside NeoDex itself: it is always isolated and sees neither your data nor your tabs. The Workshop's system part, which requires full access, only serves Python and the folders you open yourself (files, Git, terminal): it refuses any path that leaves those folders.
 
 ## Data and sync
 

@@ -18,6 +18,21 @@ L'environnement de développement intégré à NeoDex : écris des pages web, de
 - **Maj+Alt+F** formate le fichier (remet un JSON en forme, retire les espaces en trop).
 - **Ctrl+P** ouvre un fichier ou lance une commande par son nom ; **Ctrl+=** et **Ctrl+-** changent la taille du texte.
 - **Ctrl+S** enregistre.
+- **Autocomplétion** pendant que tu tapes (ou **Ctrl+Espace**) : mots-clés, extraits (`for`, `def`, `html5`…), l'API de NeoDex (`ctx.folder.read`…) et les noms déjà écrits dans le projet.
+- **Problèmes** signalés en tapant : parenthèses ou balises jamais fermées, JSON invalide, deux-points oubliés en Python… La ligne s'allume en rouge dans la marge, et la barre du bas les compte et les liste.
+- **Ctrl+Maj+O** affiche le plan du fichier (fonctions, classes, règles CSS, titres), **Ctrl+G** va à une ligne, **F2** renomme un nom partout dans le fichier. La parenthèse qui correspond s'allume.
+- **Ctrl+H** ouvre l'historique du fichier : une version est gardée à chaque Ctrl+S (15 au plus), à comparer au texte actuel et à restaurer.
+- Les fichiers Markdown ont leur aperçu en direct.
+
+## Ouvrir un dossier de ton PC
+
+- **Ouvrir un dossier** : choisis un dossier dans la fenêtre de Windows. Ses fichiers s'affichent à gauche et s'enregistrent directement dessus (les dossiers `.git`, `node_modules`… sont ignorés).
+- Supprimer un fichier le met à la **corbeille** de Windows. **Fermer le dossier** le retire de l'Atelier sans toucher à ses fichiers, et **↻** le relit.
+- **Git** : la branche, les fichiers modifiés, la comparaison de chacun avec le dernier commit, et le commit avec ton message. Pour pousser ou tirer, tape `git push` ou `git pull` dans le terminal.
+- **Terminal** : le bouton **JavaScript / Terminal** de la console exécute une commande PowerShell dans le dossier, 60 secondes au plus. **↑** et **↓** reprennent les commandes précédentes.
+- Python s'exécute directement dans le dossier.
+
+L'Atelier n'a accès qu'aux dossiers que tu as choisis toi-même.
 
 ## Exécuter (▶ ou Ctrl+Entrée)
 
@@ -37,7 +52,7 @@ La publication elle-même (Release GitHub, signature et approbation) se fait en 
 
 ## Sécurité
 
-Ton code ne tourne jamais dans NeoDex lui-même : il est toujours isolé, et ne voit ni tes données ni tes onglets. Seule l'exécution de Python passe par le volet système de l'Atelier, qui demande l'accès complet.
+Ton code ne tourne jamais dans NeoDex lui-même : il est toujours isolé, et ne voit ni tes données ni tes onglets. Le volet système de l'Atelier, qui demande l'accès complet, sert seulement à Python et aux dossiers que tu ouvres toi-même (fichiers, Git, terminal) : il refuse tout chemin qui sort de ces dossiers.
 
 ## Données et synchronisation
 

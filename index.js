@@ -45,7 +45,7 @@ const CSS = `
 .ide-tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 .ide-tpl{border:0;background:var(--bg3);padding:10px;text-align:left;box-shadow:0 0 0 2px var(--line);display:flex;flex-direction:column;gap:4px}.ide-tpl:hover{box-shadow:0 0 0 2px var(--hi)}.ide-tpl b{color:#fff}.ide-tpl span{color:var(--sub);font-size:12px;line-height:1.35}
 .ide-split{cursor:col-resize}
-@media (max-width:1100px){.ide-main{grid-template-columns:170px minmax(0,1fr)}.ide-right{grid-column:1/-1;height:360px}}
+@media (max-width:1100px){.ide{height:auto}.ide-main{grid-template-columns:170px minmax(0,1fr);grid-template-rows:minmax(320px,calc(100vh - 210px)) 340px}.ide-right{grid-column:1/-1;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}}
 .ide-status{flex:none;display:flex;gap:10px;padding:4px 10px;background:var(--bg3);font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;box-shadow:inset 0 2px 0 var(--line)}
 .ide-cur{position:absolute;left:0;right:0;background:rgba(138,92,240,.12);box-shadow:inset 3px 0 0 var(--acc);pointer-events:none}
 .ide-pal{display:flex;flex-direction:column;max-height:50vh;overflow-y:auto;box-shadow:inset 0 0 0 2px var(--line)}
@@ -55,6 +55,17 @@ const CSS = `
 .ide-bar{background:repeating-linear-gradient(90deg,var(--bg3) 0 8px,#1e1548 8px 10px)}
 .ide-ph::before{content:'';width:6px;height:6px;background:var(--acc);box-shadow:2px 2px 0 #8a1a7a;flex:none}
 .ide-logo{font:10px var(--title,monospace);color:#fff;text-shadow:2px 2px 0 var(--acc);padding:0 8px 0 2px;letter-spacing:1px}
+.ide-ac{position:absolute;z-index:6;min-width:240px;max-width:440px;max-height:228px;overflow-y:auto;background:var(--bg3);box-shadow:0 0 0 2px var(--hi),0 4px 0 2px #05010b;display:flex;flex-direction:column}
+.ide-ac .ide-pi{padding:4px 10px;font:var(--fs,13px) Consolas,'Courier New',monospace}
+.ide-bm{position:absolute;pointer-events:none;box-shadow:inset 0 0 0 1px var(--acc);background:rgba(255,90,217,.18)}
+.ide-gut .gx{color:#fff;background:var(--err)}.ide-gut .gw{color:#10061c;background:var(--warn)}
+.ide-status>span:first-child{overflow:hidden;text-overflow:ellipsis}
+.ide-prob{border:0;background:none;padding:0;margin-left:auto;color:var(--ok);font-size:12px;flex:none}.ide-prob.bad{color:var(--err)}
+.ide-diff{font:12px/1.5 Consolas,'Courier New',monospace;white-space:pre;overflow:auto;max-height:56vh;background:#0b0520;box-shadow:inset 0 0 0 2px var(--line);padding:6px 0}
+.ide-diff div{padding:0 10px}.ide-diff .a{background:rgba(91,227,125,.16);color:#c6f7d3}.ide-diff .d{background:rgba(255,107,107,.16);color:#ffcaca}.ide-diff .g{color:var(--sub)}
+.ide-git{display:flex;flex-direction:column;max-height:40vh;overflow-y:auto;box-shadow:inset 0 0 0 2px var(--line)}
+.ide-git .ide-pi em{display:inline-block;width:26px;color:var(--warn)}
+.ide-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.ide-row .ide-in{flex:1;min-width:160px}
 `;
 const EXT_COL = { html: '#ff8a5c', css: '#5cb8ff', js: '#ffd45c', json: '#5be37d', py: '#8be9fd', md: '#c070ff', txt: '#9a88c4', png: '#ff5ad9' };
 const extOf = p => (p.split('.').pop() || '').toLowerCase();
@@ -198,6 +209,163 @@ function validatePlugin(files) {
   if (!out.some(o => o.lvl === 'e')) add('o', 'Aucune erreur : ce plugin est prêt à être publié (puis approuvé).');
   return out;
 }
+/* ---------- problèmes, plan du fichier, autocomplétion, aperçu Markdown, comparaison : des fonctions pures (test-neodex.js les essaie) ---------- */
+const lineAt = (t, i) => { let n = 1; for (let k = t.indexOf('\n'); k >= 0 && k < i; k = t.indexOf('\n', k + 1)) n++; return n; };
+// parenthèses, crochets, accolades, chaînes et commentaires qui ne se ferment pas (JS, CSS, Python, JSON)
+function brackets(lang, t) {
+  const out = [], st = [], O = '([{', C = ')]}'; let prev = '';
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i], d = t[i + 1];
+    if (lang === 'py' ? c === '#' : c === '/' && d === '/' && lang !== 'css') { const e = t.indexOf('\n', i); if (e < 0) break; i = e; continue; }
+    if (lang !== 'py' && c === '/' && d === '*') { const e = t.indexOf('*/', i + 2); if (e < 0) { out.push({ line: lineAt(t, i), ch: '/*', msg: 'jamais fermé' }); break; } i = e + 1; continue; }
+    if (lang === 'js' && c === '/' && /^$|[(,=:[!&|?{};+\-*%<>~^]$/.test(prev)) {  // une expression régulière /…/ : on la saute
+      let j = i + 1, cls = false; for (; j < t.length && t[j] !== '\n'; j++) { if (t[j] === '\\') { j++; continue; } if (t[j] === '[') cls = true; else if (t[j] === ']') cls = false; else if (t[j] === '/' && !cls) break; }
+      if (t[j] === '/') { i = j; prev = '/'; continue; }
+    }
+    if (c === '"' || c === "'" || (c === '`' && lang === 'js')) {
+      if (lang === 'py' && t.startsWith(c + c + c, i)) { const e = t.indexOf(c + c + c, i + 3); if (e < 0) { out.push({ line: lineAt(t, i), ch: c + c + c, msg: 'jamais fermé' }); break; } i = e + 2; prev = c; continue; }
+      let j = i + 1; while (j < t.length && t[j] !== c && (c === '`' || t[j] !== '\n')) { if (t[j] === '\\') j++; j++; }
+      if (t[j] !== c) out.push({ line: lineAt(t, i), ch: c, msg: 'jamais fermé' });
+      i = j; prev = c; continue;
+    }
+    if (O.includes(c)) st.push([c, i]);
+    else if (C.includes(c)) {
+      const top = st.pop();
+      if (!top) out.push({ line: lineAt(t, i), ch: c, msg: 'en trop' });
+      else if (top[0] !== O[C.indexOf(c)]) {  // ce qui reste ouvert au-dessus de la bonne ouverture n'a jamais été fermé ; sans bonne ouverture, ce signe est en trop
+        st.push(top); const k = st.map(x => x[0]).lastIndexOf(O[C.indexOf(c)]);
+        if (k < 0) out.push({ line: lineAt(t, i), ch: c, msg: 'en trop' }); else for (const [o, j] of st.splice(k).slice(1)) out.push({ line: lineAt(t, j), ch: o, msg: 'jamais fermé' });
+      }
+    }
+    if (!/\s/.test(c)) prev = c;
+  }
+  for (const [c, i] of st) out.push({ line: lineAt(t, i), ch: c, msg: 'jamais fermé' });
+  return out;
+}
+const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr|!doctype)$/i, OPTIONAL = /^(li|p|td|th|tr|thead|tbody|tfoot|option|dt|dd|html|head|body|colgroup)$/i;
+function htmlTags(t) {
+  const out = [], st = [], src = t.replace(/<!--[\s\S]*?-->/g, m => m.replace(/[^\n]/g, ' ')).replace(/(<(script|style)\b[^>]*>)([\s\S]*?)(<\/\2\s*>)/gi, (m, a, _, b, c) => a + b.replace(/[^\n]/g, ' ') + c);
+  for (const m of src.matchAll(/<(\/?)([A-Za-z][\w:-]*)\b(?:"[^"]*"|'[^']*'|[^'">])*?(\/?)>/g)) {
+    const close = m[1] === '/', name = m[2].toLowerCase(), line = lineAt(src, m.index);
+    if (VOID.test(name) || m[3]) continue;
+    if (!close) { st.push([name, line]); continue; }
+    const k = st.map(x => x[0]).lastIndexOf(name);
+    if (k < 0) { out.push({ line, ch: '</' + name + '>', msg: 'sans balise ouvrante' }); continue; }
+    for (const [n, l] of st.splice(k).slice(1)) if (!OPTIONAL.test(n)) out.push({ line: l, ch: '<' + n + '>', msg: 'jamais fermé' });
+  }
+  for (const [n, l] of st) if (!OPTIONAL.test(n)) out.push({ line: l, ch: '<' + n + '>', msg: 'jamais fermé' });
+  return out;
+}
+function pyLines(t) {
+  const out = [], L = t.split('\n'); let depth = 0;
+  L.forEach((l, k) => {
+    const code = l.replace(/#.*$/, ''), ind = /^[ \t]*/.exec(l)[0];
+    if (depth === 0 && /\t/.test(ind) && / /.test(ind)) out.push({ line: k + 1, msg: 'tabulations et espaces mélangés' });
+    if (depth === 0 && /^\s*(def|class|if|elif|else|for|while|try|except|finally|with)\b/.test(code) && !/:\s*$/.test(code) && !/[(\[{,\\]\s*$/.test(code)) out.push({ line: k + 1, msg: 'il manque « : » en fin de ligne' });
+    if (depth === 0 && /:\s*$/.test(code) && /^\s*(def|class|if|elif|else|for|while|try|except|finally|with)\b/.test(code)) {
+      const nx = L.slice(k + 1).find(x => x.trim() && !/^\s*#/.test(x));
+      if (nx == null || /^[ \t]*/.exec(nx)[0].length <= ind.length) out.push({ line: k + 1, msg: 'bloc vide : la ligne suivante doit être décalée' });
+    }
+    for (const ch of code.replace(/(["'])(?:\\.|(?!\1).)*\1/g, '')) depth += '([{'.includes(ch) ? 1 : ')]}'.includes(ch) ? -1 : 0;
+    if (depth < 0) depth = 0;
+  });
+  return out;
+}
+let evalOk = true;  // la page de NeoDex peut interdire la compilation de code (CSP) : on ne vérifie alors que les parenthèses
+function diagnose(lang, t) {
+  if (!t || t.startsWith('data:') || t.length > 400000) return [];
+  if (lang === 'json') { if (!t.trim()) return []; try { JSON.parse(t); return []; } catch (e) { const m = /position (\d+)/.exec(e.message), l = /line (\d+)/.exec(e.message); return [{ line: l ? +l[1] : m ? lineAt(t, +m[1]) : 1, msg: 'JSON invalide', detail: e.message }]; } }
+  if (lang === 'html') return htmlTags(t);
+  if (lang === 'css') return brackets('css', t);
+  if (lang === 'py') { const b = brackets('py', t); return b.length ? b : pyLines(t); }
+  if (lang === 'js') {
+    const b = brackets('js', t); if (b.length || !evalOk) return b;
+    const body = t.replace(/^\s*import\s[^;\n]*;?/gm, '').replace(/^(\s*)export\s+(default\s+)?/gm, '$1');
+    try { new (Object.getPrototypeOf(async function () {}).constructor)(body); } catch (e) { if (e instanceof SyntaxError) return [{ line: 0, msg: 'Erreur de syntaxe', detail: e.message }]; evalOk = false; }
+    return [];
+  }
+  return [];
+}
+const matchBracket = (t, i) => {
+  const O = '([{', C = ')]}', c = t[i], o = O.indexOf(c), cl = C.indexOf(c); if (o < 0 && cl < 0) return -1;
+  const dir = o >= 0 ? 1 : -1, me = c, other = o >= 0 ? C[o] : O[cl]; let depth = 0;
+  for (let k = i, n = 0; k >= 0 && k < t.length && n < 40000; k += dir, n++) { if (t[k] === me) depth++; else if (t[k] === other && --depth === 0) return k; }
+  return -1;
+};
+function symbols(lang, t) {
+  const out = [], L = t.split('\n'), add = (name, kind, k) => name && out.push({ name, kind, line: k + 1 });
+  L.forEach((l, k) => {
+    let m;
+    if (lang === 'js') {
+      if ((m = /^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([\w$]+)/.exec(l))) add(m[1], 'fonction', k);
+      else if ((m = /^\s*(?:export\s+)?class\s+([\w$]+)/.exec(l))) add(m[1], 'classe', k);
+      else if ((m = /^\s*(?:export\s+)?(?:const|let|var)\s+([\w$]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[\w$]+)\s*=>/.exec(l))) add(m[1], 'fonction', k);
+      else if ((m = /^\s*(?:export\s+)?(?:const|let|var)\s+([A-Z][A-Z0-9_]{2,})\s*=/.exec(l))) add(m[1], 'constante', k);
+      else if ((m = /^\s+(?:static\s+)?(?:async\s+)?([\w$]+)\s*\([^)]*\)\s*\{\s*$/.exec(l)) && !/^(if|for|while|switch|catch|function|return)$/.test(m[1])) add(m[1], 'méthode', k);
+    } else if (lang === 'py') {
+      if ((m = /^(\s*)(?:async\s+)?def\s+(\w+)/.exec(l))) add(m[2], m[1] ? 'méthode' : 'fonction', k);
+      else if ((m = /^\s*class\s+(\w+)/.exec(l))) add(m[1], 'classe', k);
+    } else if (lang === 'css') { if ((m = /^\s*([^{}\s@/][^{}]*?|@media[^{]*?)\s*\{/.exec(l))) add(m[1].trim().slice(0, 80), 'règle', k); }
+    else if (lang === 'md') { if ((m = /^(#{1,6})\s+(.+)/.exec(l))) add('  '.repeat(m[1].length - 1) + m[2].trim(), 'titre', k); }
+    else if (lang === 'html') { for (const x of l.matchAll(/\bid=["']([^"']+)["']/g)) add('#' + x[1], 'id', k); if ((m = /<(h[1-3])\b[^>]*>([^<]{1,80})/i.exec(l))) add(m[2].trim(), m[1].toLowerCase(), k); }
+  });
+  return out;
+}
+const SNIP = {
+  js: [['for', 'for (let i = 0; i < $0; i++) {\n  \n}'], ['forof', 'for (const x of $0) {\n  \n}'], ['if', 'if ($0) {\n  \n}'], ['ifelse', 'if ($0) {\n  \n} else {\n  \n}'], ['function', 'function $0() {\n  \n}'], ['arrow', 'const $0 = () => {\n  \n};'], ['try', 'try {\n  $0\n} catch (e) {\n  console.error(e);\n}'], ['log', 'console.log($0);'], ['fetch', 'const r = await fetch($0);\nconst data = await r.json();'], ['plugin', 'export default async function (ctx) {\n  const v = ctx.view;\n  $0\n}']],
+  py: [['def', 'def $0():\n    pass'], ['class', 'class $0:\n    def __init__(self):\n        pass'], ['for', 'for x in $0:\n    pass'], ['if', 'if $0:\n    pass'], ['main', 'if __name__ == "__main__":\n    $0'], ['with', 'with open($0, encoding="utf-8") as f:\n    texte = f.read()'], ['try', 'try:\n    $0\nexcept Exception as e:\n    print(e)']],
+  html: [['html5', '<!doctype html>\n<html lang="fr">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>$0</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  \n  <script src="app.js"></script>\n</body>\n</html>'], ['div', '<div>$0</div>'], ['button', '<button>$0</button>'], ['link', '<link rel="stylesheet" href="$0">'], ['script', '<script src="$0"></script>'], ['ul', '<ul>\n  <li>$0</li>\n</ul>']],
+  css: [['flex', 'display: flex;\ngap: $0px;\nalign-items: center;'], ['grid', 'display: grid;\ngrid-template-columns: repeat($0, 1fr);\ngap: 8px;'], ['media', '@media (max-width: $0px) {\n  \n}'], ['center', 'display: grid;\nplace-items: center;$0']],
+  md: [['lien', '[$0](https://)'], ['code', '```\n$0\n```'], ['tableau', '| $0 | |\n|---|---|\n| | |']],
+};
+const KW = { js: JS_KW.split('|').concat(['console', 'document', 'window', 'JSON', 'Math', 'Promise', 'Array', 'Object', 'String', 'Number', 'addEventListener', 'querySelector', 'querySelectorAll', 'createElement', 'appendChild', 'textContent', 'innerHTML', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'localStorage', 'length', 'push', 'map', 'filter', 'forEach', 'reduce', 'includes', 'slice', 'splice']),
+  py: PY_KW.split('|').concat(['print', 'input', 'range', 'len', 'open', 'list', 'dict', 'set', 'tuple', 'str', 'int', 'float', 'enumerate', 'zip', 'sorted', 'isinstance', 'append', 'items', 'keys', 'values', 'split', 'join', 'strip', 'format']),
+  css: ['display', 'position', 'absolute', 'relative', 'flex', 'grid', 'margin', 'padding', 'border', 'background', 'color', 'font-size', 'font-family', 'font-weight', 'width', 'height', 'max-width', 'min-height', 'justify-content', 'align-items', 'gap', 'transition', 'transform', 'opacity', 'cursor', 'overflow', 'z-index', 'box-shadow', 'border-radius', 'text-align', 'line-height'],
+  html: ['div', 'span', 'section', 'header', 'footer', 'main', 'button', 'input', 'label', 'form', 'canvas', 'img', 'script', 'style', 'class', 'href', 'src', 'type', 'placeholder'], md: [], json: [], txt: [] };
+const API = ['ctx.view', 'ctx.id', 'ctx.version', 'ctx.folder.read', 'ctx.folder.write', 'ctx.folder.remove', 'ctx.folder.list', 'ctx.storage.get', 'ctx.storage.set', 'ctx.onOpen', 'ctx.onClose', 'ctx.permission', 'ctx.notifications.send', 'ctx.widget.set', 'ctx.widget.clear', 'ctx.background.every', 'ctx.host.toast', 'ctx.host.addStyle', 'ctx.host.confirm', 'ctx.host.ask', 'ctx.host.newTab', 'ctx.el', 'console.log', 'console.error', 'console.warn', 'document.querySelector', 'document.createElement', 'JSON.parse', 'JSON.stringify', 'Math.random', 'Math.floor', 'Math.round', 'Math.max', 'Math.min'];
+// ce que propose l'autocomplétion pour le mot tapé : extraits, mots-clés, API de NeoDex, puis les noms déjà écrits dans le projet
+function complete(lang, prefix, words = []) {
+  const p = prefix.toLowerCase(), out = [], seen = new Set(), add = (label, insert, kind) => { if (!seen.has(label) && label.toLowerCase() !== p) { seen.add(label); out.push({ label, insert, kind }); } };
+  if (prefix.includes('.')) { if (lang === 'js') API.filter(a => a.toLowerCase().startsWith(p)).forEach(a => add(a, a, 'NeoDex')); return out.slice(0, 14); }
+  if (p.length < 1) return [];
+  (SNIP[lang] || []).filter(([k]) => k.startsWith(p)).forEach(([k, v]) => add(k, v, 'extrait'));
+  (KW[lang] || []).filter(k => k.toLowerCase().startsWith(p)).sort((a, b) => a.length - b.length).forEach(k => add(k, k, 'mot-clé'));
+  [...words].filter(w => w.toLowerCase().startsWith(p)).sort((a, b) => a.length - b.length).forEach(w => add(w, w, 'nom'));
+  return out.slice(0, 14);
+}
+// Markdown -> HTML sûr (tout le texte est échappé, seuls les liens http(s) ou relatifs restent cliquables)
+function md2html(t) {
+  const inl = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>')
+    .replace(/!?\[([^\]]*)\]\(((?:https?:\/\/|\.?\/|#)?[^)\s"]*)\)/g, (m, txt, u) => /^(javascript|data|vbscript):/i.test(u) ? txt : '<a href="' + u + '" target="_blank" rel="noopener">' + txt + '</a>');
+  const out = [], L = t.replace(/\r/g, '').split('\n'); let list = '', para = [];
+  const flush = () => { if (para.length) { out.push('<p>' + para.map(inl).join('<br>') + '</p>'); para = []; } if (list) { out.push('</' + list + '>'); list = ''; } };
+  for (let k = 0; k < L.length; k++) {
+    const l = L[k]; let m;
+    if (/^```/.test(l)) { flush(); const b = []; while (++k < L.length && !/^```/.test(L[k])) b.push(L[k]); out.push('<pre><code>' + esc(b.join('\n')) + '</code></pre>'); continue; }
+    if ((m = /^(#{1,6})\s+(.*)/.exec(l))) { flush(); out.push('<h' + m[1].length + '>' + inl(m[2]) + '</h' + m[1].length + '>'); continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { flush(); out.push('<hr>'); continue; }
+    if ((m = /^\s*([-*+]|\d+\.)\s+(.*)/.exec(l))) { const tag = /\d/.test(m[1]) ? 'ol' : 'ul'; if (para.length || (list && list !== tag)) flush(); if (!list) { list = tag; out.push('<' + tag + '>'); } out.push('<li>' + inl(m[2]) + '</li>'); continue; }
+    if ((m = /^>\s?(.*)/.exec(l))) { flush(); out.push('<blockquote>' + inl(m[1]) + '</blockquote>'); continue; }
+    if (!l.trim()) { flush(); continue; }
+    if (list) flush(); para.push(l);
+  }
+  flush(); return out.join('\n');
+}
+// comparaison ligne à ligne (plus longue sous-suite commune) : [{t: ' ' | '-' | '+', s}]
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n'); let s = 0; while (s < A.length && s < B.length && A[s] === B[s]) s++;
+  let ea = A.length, eb = B.length; while (ea > s && eb > s && A[ea - 1] === B[eb - 1]) { ea--; eb--; }
+  const X = A.slice(s, ea), Y = B.slice(s, eb), n = X.length, m = Y.length, out = A.slice(0, s).map(x => ({ t: ' ', s: x }));
+  if (n * m > 4e6) { X.forEach(x => out.push({ t: '-', s: x })); Y.forEach(y => out.push({ t: '+', s: y })); }  // shortcut: très gros fichiers, tout l'écart en bloc
+  else {
+    const T = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) T[i][j] = X[i] === Y[j] ? T[i + 1][j + 1] + 1 : Math.max(T[i + 1][j], T[i][j + 1]);
+    let i = 0, j = 0; while (i < n && j < m) { if (X[i] === Y[j]) { out.push({ t: ' ', s: X[i] }); i++; j++; } else if (T[i + 1][j] >= T[i][j + 1]) out.push({ t: '-', s: X[i++] }); else out.push({ t: '+', s: Y[j++] }); }
+    while (i < n) out.push({ t: '-', s: X[i++] }); while (j < m) out.push({ t: '+', s: Y[j++] });
+  }
+  A.slice(ea).forEach(x => out.push({ t: ' ', s: x })); return out;
+}
+const TEXT_EXT = /\.(html?|css|m?js|cjs|ts|tsx|jsx|json|py|md|txt|csv|xml|svg|ya?ml|toml|ini|cfg|bat|ps1|sh|c|h|cpp|hpp|cs|java|kt|go|rs|rb|php|lua|sql|vue|svelte|gitignore|gitattributes|env|editorconfig|lock)$|^[^.]+$|\/[^./]+$/i;
 /* ---------- sandbox pages ---------- */
 const CONSOLE_HOOK = `<script>(()=>{const send=(l,a)=>{try{parent.postMessage({neoIde:1,l,a:a.map(x=>{try{if(typeof x==='string')return x;if(x instanceof Error)return x.stack||String(x);if(typeof x!=='object'||!x)return String(x);const f=(k,v)=>typeof v==='function'?'[fonction]':v,c=JSON.stringify(x,f);return c.length<90?c:JSON.stringify(x,f,1)}catch{return String(x)}})},'*')}catch{}};for(const l of['log','info','warn','error','debug'])console[l]=(...a)=>send(l,a);addEventListener('error',e=>send('error',[e.message+(e.lineno?' (ligne '+e.lineno+')':'')]));addEventListener('unhandledrejection',e=>send('error',['Promesse rejetée : '+(e.reason&&e.reason.message||e.reason)]));addEventListener('message',async e=>{if(e.data&&e.data.neoEval){try{const r=await(0,eval)(e.data.neoEval);send('result',[r===undefined?'undefined':r])}catch(x){send('error',[x.message])}}})})()<\/script>`;
 const inlineProject = (files, html) => {
@@ -228,7 +396,9 @@ export default async function (ctx) {
   meta.projects = Object.keys(projects);
   let proj = null, openTabs = [], active = '', dirty = new Set(), saveT = 0, prevT = 0, rightMode = 'preview', prevKind = '';
   const saveMeta = () => ctx.folder.write('ide', meta).catch(() => {});
-  const saveProj = (now) => { if (!proj) return; clearTimeout(saveT); const go = () => { proj.updated = Date.now(); ctx.folder.write('p_' + proj.key, proj).catch(e => toast('Sauvegarde impossible : ' + e.message, true)); dirty.clear(); renderTabs(); }; if (now) go(); else saveT = setTimeout(go, 700); };
+  const callMain = (n, ...a) => ctx.neo?.pluginMain ? ctx.neo.pluginMain(ctx.id, n, ...a) : Promise.reject(new Error('le volet système de l\'Atelier n\'est pas chargé'));
+  // un dossier du PC s'enregistre dans ses fichiers ; un projet de l'Atelier dans les données de NeoDex
+  const saveProj = (now) => { if (!proj) return; clearTimeout(saveT); const go = () => { const p = proj, paths = [...dirty]; p.updated = Date.now(); if (p.disk) Promise.all(paths.filter(f => typeof p.files[f] === 'string').map(f => callMain('ide:write', p.disk, f, p.files[f]))).catch(e => toast('Enregistrement impossible : ' + e.message, true)); else { const { bin, ...keep } = p; ctx.folder.write('p_' + p.key, keep).catch(e => toast('Sauvegarde impossible : ' + e.message, true)); } dirty.clear(); renderTabs(); paths.forEach(f => typeof snap === 'function' && snap(p, f, now)); }; if (now) go(); else saveT = setTimeout(go, 700); };
   const modal = (build) => new Promise(res => { const mod = document.createElement('div'); mod.className = 'ide ide-mod'; mod.style.cssText = 'height:auto;min-height:0'; const box = document.createElement('div'); box.className = 'ide-box'; mod.append(box); view.append(mod); const done = v => { mod.remove(); res(v); }; mod.onmousedown = e => { if (e.target === mod) done(null); }; build(box, done); });
   const askText = (title, val = '', ok = 'OK') => modal((box, done) => { box.innerHTML = '<h3></h3>'; box.firstChild.textContent = title; const i = document.createElement('input'); i.className = 'ide-in'; i.value = val; i.onkeydown = e => { if (e.key === 'Enter') done(i.value.trim() || null); if (e.key === 'Escape') done(null); }; const b = document.createElement('button'); b.className = 'ide-b acc'; b.textContent = ok; b.onclick = () => done(i.value.trim() || null); const c = document.createElement('button'); c.className = 'ide-b'; c.textContent = 'Annuler'; c.onclick = () => done(null); const r = document.createElement('div'); r.append(b, c); box.append(i, r); setTimeout(() => { i.focus(); i.select(); }, 20); });
   const askYes = (msg, ok = 'Confirmer') => modal((box, done) => { box.innerHTML = '<h3>Confirmation</h3><div></div>'; box.lastChild.textContent = msg; const b = document.createElement('button'); b.className = 'ide-b acc'; b.textContent = ok; b.onclick = () => done(true); const c = document.createElement('button'); c.className = 'ide-b'; c.textContent = 'Annuler'; c.onclick = () => done(false); const r = document.createElement('div'); r.append(b, c); box.append(r); }).then(v => !!v);
@@ -258,11 +428,12 @@ export default async function (ctx) {
   const log = (l, text) => { const d = document.createElement('div'); d.className = { error: 'e', warn: 'w', info: 'i', debug: 'i', result: 'o', sys: 'i' }[l] || ''; d.textContent = (l === 'result' ? '← ' : '') + text; con.append(d); con.scrollTop = con.scrollHeight; while (con.childElementCount > 400) con.firstChild.remove(); };
   /* ----- editor ----- */
   const file = () => proj && proj.files[active];
-  const refreshEd = () => { const t = ta.value, lang = langOf(active || ''); pre.innerHTML = highlight(lang, t) + '\n'; const n = t.split('\n').length; if (gut._n !== n) { gut._n = n; gut.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n'); } };
-  const loadFile = () => { const t = proj && proj.files[active]; ta.disabled = t == null; ta.value = t ?? ''; ta.placeholder = t == null ? 'Ouvre ou crée un fichier' : ''; refreshEd(); ta.scrollTop = ta.scrollLeft = 0; syncScroll(); typeof updStatus === 'function' && updStatus(); };
+  const refreshEd = () => { const t = ta.value, lang = langOf(active || ''); pre.innerHTML = highlight(lang, t) + '\n'; const n = t.split('\n').length; if (gut._n !== n || gut._p !== probKey) { gut._n = n; gut._p = probKey; gut.innerHTML = Array.from({ length: n }, (_, i) => probLines.has(i + 1) ? '<span class="gx">' + (i + 1) + '</span>' : i + 1).join('\n'); } };
+  let probs = [], probLines = new Set(), probKey = '';
+  const loadFile = () => { const t = proj && proj.files[active], bin = !!proj?.bin?.has(active); ta.disabled = t == null || bin; ta.value = bin ? '' : t ?? ''; ta.placeholder = bin ? 'Fichier binaire ou trop gros : il ne s\'ouvre pas dans l\'éditeur.' : t == null ? 'Ouvre ou crée un fichier' : ''; typeof checkNow === 'function' && (checkNow(), acClose()); refreshEd(); ta.scrollTop = ta.scrollLeft = 0; syncScroll(); typeof updStatus === 'function' && updStatus(); };
   const syncScroll = () => { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; gut.scrollTop = ta.scrollTop; };
   ta.addEventListener('scroll', syncScroll);
-  const onEdit = () => { if (!proj || active == null) return; proj.files[active] = ta.value; dirty.add(active); refreshEd(); renderTabs(); saveProj(false); clearTimeout(prevT); prevT = setTimeout(() => livePreview(), 450); };
+  const onEdit = () => { if (!proj || active == null) return; proj.files[active] = ta.value; dirty.add(active); refreshEd(); renderTabs(); saveProj(false); clearTimeout(prevT); prevT = setTimeout(() => { livePreview(); checkNow(); }, 450); };
   ta.addEventListener('input', onEdit);
   const ins = txt => document.execCommand('insertText', false, txt);
   const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
@@ -308,7 +479,7 @@ export default async function (ctx) {
     if (proj) { meta.open[proj.key] = openTabs; meta.active[proj.key] = active; saveMeta(); }
   };
   const closeTab = p => { const i = openTabs.indexOf(p); openTabs.splice(i, 1); if (active === p) { active = openTabs[Math.min(i, openTabs.length - 1)] || ''; loadFile(); } renderTabs(); };
-  const selectFile = p => { if (!proj || !(p in proj.files)) return; if (!openTabs.includes(p)) openTabs.push(p); active = p; loadFile(); renderTabs(); renderTree(); livePreview(); };
+  const selectFile = p => { if (!proj || !(p in proj.files)) return; if (proj.disk && proj.files[p] === null) { readDisk(proj, p).then(() => selectFile(p)); return; } if (!openTabs.includes(p)) openTabs.push(p); active = p; loadFile(); renderTabs(); renderTree(); livePreview(); };
   const renderTree = () => {
     tree.innerHTML = ''; if (!proj) return;
     const names = Object.keys(proj.files).sort((a, b) => { const fa = a.includes('/'), fb = b.includes('/'); return fa === fb ? a.localeCompare(b) : fa ? -1 : 1; }); let lastDir = null;
@@ -320,16 +491,16 @@ export default async function (ctx) {
     });
     if (!names.length) { const e = document.createElement('div'); e.style.cssText = 'padding:10px;color:var(--sub);font-size:13px'; e.textContent = 'Projet vide'; tree.append(e); }
   };
-  const newFile = async () => { if (!proj) return; const n = await askText('Nom du nouveau fichier (ex. app.js, dossier/page.html)'); if (!n) return; const p = n.replace(/\\/g, '/').replace(/^\/+/, ''); if (!/^[\w.\- \/]+$/.test(p) || p.includes('..')) { toast('Nom de fichier invalide.', true); return; } if (p in proj.files) { toast('Ce fichier existe déjà.', true); selectFile(p); return; } proj.files[p] = ''; saveProj(true); selectFile(p); ta.focus(); };
-  const renameFile = async p => { const n = await askText('Renommer « ' + p + ' »', p, 'Renommer'); if (!n || n === p) return; const q = n.replace(/\\/g, '/').replace(/^\/+/, ''); if (!/^[\w.\- \/]+$/.test(q) || q.includes('..') || q in proj.files) { toast('Nom invalide ou déjà pris.', true); return; } proj.files[q] = proj.files[p]; delete proj.files[p]; openTabs = openTabs.map(x => x === p ? q : x); if (active === p) active = q; saveProj(true); renderTree(); renderTabs(); };
-  const delFile = async p => { if (!(await askYes('Supprimer « ' + p + ' » ? Cette action est définitive.', 'Supprimer'))) return; delete proj.files[p]; closeTabIf(p); saveProj(true); renderTree(); };
+  const newFile = async () => { if (!proj) return; const n = await askText('Nom du nouveau fichier (ex. app.js, dossier/page.html)'); if (!n) return; const p = n.replace(/\\/g, '/').replace(/^\/+/, ''); if (!/^[\w.\- \/]+$/.test(p) || p.includes('..')) { toast('Nom de fichier invalide.', true); return; } if (p in proj.files) { toast('Ce fichier existe déjà.', true); selectFile(p); return; } if (proj.disk) { try { await callMain('ide:write', proj.disk, p, ''); } catch (e) { toast(e.message, true); return; } } proj.files[p] = ''; saveProj(true); renderTree(); selectFile(p); ta.focus(); };
+  const renameFile = async p => { const n = await askText('Renommer « ' + p + ' »', p, 'Renommer'); if (!n || n === p) return; const q = n.replace(/\\/g, '/').replace(/^\/+/, ''); if (!/^[\w.\- \/]+$/.test(q) || q.includes('..') || q in proj.files) { toast('Nom invalide ou déjà pris.', true); return; } if (proj.disk) { try { await callMain('ide:mv', proj.disk, p, q); } catch (e) { toast(e.message, true); return; } } proj.files[q] = proj.files[p]; delete proj.files[p]; openTabs = openTabs.map(x => x === p ? q : x); if (active === p) active = q; saveProj(true); renderTree(); renderTabs(); };
+  const delFile = async p => { if (proj.disk) { if (!(await askYes('Mettre « ' + p + ' » à la corbeille de Windows ?', 'Mettre à la corbeille'))) return; try { await callMain('ide:rm', proj.disk, p); } catch (e) { toast(e.message, true); return; } } else if (!(await askYes('Supprimer « ' + p + ' » ? Cette action est définitive.', 'Supprimer'))) return; delete proj.files[p]; closeTabIf(p); saveProj(true); renderTree(); };
   const closeTabIf = p => { if (openTabs.includes(p)) closeTab(p); };
-  hExp.append(mkB('+', newFile, 'sm', 'Nouveau fichier'));
+  hExp.append(mkB('+', newFile, 'sm', 'Nouveau fichier'), mkB('↻', () => syncDisk(true), 'sm', 'Relire le dossier du PC'));
   /* ----- projects ----- */
   const projSel = document.createElement('select'); projSel.className = 'ide-sel';
-  const refreshProjSel = () => { projSel.innerHTML = ''; meta.projects.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = projects[k].name; if (proj && k === proj.key) o.selected = true; projSel.append(o); }); if (!meta.projects.length) { const o = document.createElement('option'); o.textContent = '(aucun projet)'; projSel.append(o); } };
+  const refreshProjSel = () => { projSel.innerHTML = ''; meta.projects.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = (projects[k].disk ? '📁 ' : '') + projects[k].name; if (proj && k === proj.key) o.selected = true; projSel.append(o); }); if (!meta.projects.length) { const o = document.createElement('option'); o.textContent = '(aucun projet)'; projSel.append(o); } };
   const openProject = k => { if (saveT) saveProj(true); proj = projects[k] || null; meta.cur = k; if (proj) { proj.key = k; openTabs = (meta.open[k] || []).filter(p => p in proj.files); active = (meta.active[k] in proj.files ? meta.active[k] : openTabs[0]) || ''; if (!openTabs.length) { const first = Object.keys(proj.files).find(p => /index\.(html|js)|main\.(js|py)|plugin\.json/.test(p)) || Object.keys(proj.files)[0]; if (first) { openTabs = [first]; active = first; } } } else { openTabs = []; active = ''; } saveMeta(); refreshProjSel(); renderTree(); renderTabs(); loadFile(); killPreview(); livePreview(); refreshButtons(); };
-  projSel.onchange = () => openProject(projSel.value);
+  projSel.onchange = () => openAny(projSel.value);
   const createProject = async (tpl) => {
     const n = await askText('Nom du projet', tpl ? tpl.name : 'Mon projet', 'Créer'); if (!n) return null;
     let key = slug(n), i = 2; while (projects[key]) key = slug(n) + '-' + i++;
@@ -338,7 +509,7 @@ export default async function (ctx) {
     projects[key] = { name: n, key, files, created: Date.now(), updated: Date.now() }; meta.projects.push(key); await ctx.folder.write('p_' + key, projects[key]); openProject(key); return key;
   };
   const showTemplates = () => modal((box, done) => { box.innerHTML = '<h3>Nouveau projet</h3><div class="ide-tpls"></div>'; const g = box.lastChild; TEMPLATES.forEach(t => { const b = document.createElement('button'); b.className = 'ide-tpl'; b.innerHTML = '<b></b><span></span>'; b.firstChild.textContent = t.name; b.lastChild.textContent = t.d; b.onclick = () => { done(1); createProject(t); }; g.append(b); }); const c = document.createElement('button'); c.className = 'ide-b'; c.textContent = 'Fermer'; c.onclick = () => done(null); box.append(c); });
-  const delProject = async () => { if (!proj) return; if (!(await askYes('Supprimer le projet « ' + proj.name + ' » et tous ses fichiers ? Cette action est définitive.', 'Supprimer le projet'))) return; const k = proj.key; delete projects[k]; meta.projects = meta.projects.filter(x => x !== k); await ctx.folder.remove('p_' + k).catch(() => {}); openProject(meta.projects[0] || ''); };
+  const delProject = async () => { if (!proj) return; if (proj.disk) { if (!(await askYes('Fermer le dossier « ' + proj.name + ' » dans l\'Atelier ? Ses fichiers restent sur ton PC.', 'Fermer le dossier'))) return; const k = proj.key; callMain('ide:forget', proj.disk).catch(() => {}); meta.disks = meta.disks.filter(d => d.key !== k); delete projects[k]; meta.projects = meta.projects.filter(x => x !== k); saveMeta(); openAny(meta.projects[0] || ''); return; } if (!(await askYes('Supprimer le projet « ' + proj.name + ' » et tous ses fichiers ? Cette action est définitive.', 'Supprimer le projet'))) return; const k = proj.key; delete projects[k]; meta.projects = meta.projects.filter(x => x !== k); await ctx.folder.remove('p_' + k).catch(() => {}); openAny(meta.projects[0] || ''); };
   const renameProject = async () => { if (!proj) return; const n = await askText('Nom du projet', proj.name, 'Renommer'); if (!n) return; proj.name = n; saveProj(true); refreshProjSel(); };
   /* ----- preview, console, running ----- */
   let iframe = null, worker = null, workerT = 0;
@@ -349,6 +520,8 @@ export default async function (ctx) {
   const livePreview = (force) => {
     if (!proj) return emptyPrev('Crée ou ouvre un projet.');
     const f = proj.files, ext = extOf(active || '');
+    if (ext === 'md' && typeof f[active] === 'string') { killPreview(); prevKind = 'md'; hPrev.firstChild.textContent = 'Aperçu · ' + active.split('/').pop(); mkFrame('<!doctype html><meta charset=utf-8><style>body{font:15px/1.6 system-ui,sans-serif;padding:14px 22px;color:#1d1530;max-width:820px}pre,code{background:#f1ecfa}pre{padding:10px;overflow:auto}code{padding:1px 4px}blockquote{margin:0;padding-left:12px;border-left:4px solid #c9b6f5;color:#55497a}img{max-width:100%}</style>' + md2html(f[active])); return; }
+    if (prevKind === 'md') prevKind = '';
     if (f['index.html'] && !f['plugin.json'] && ['html', 'css', 'js'].includes(ext) && (force || prevKind === 'web' || !prevKind)) { if (prevKind !== 'web' || force || ext !== 'js') { prevKind = 'web'; hPrev.firstChild.textContent = 'Aperçu · index.html'; mkFrame(inlineProject(f, f['index.html'])); } return; }
     if (f['plugin.json'] && prevKind === 'plugin' && force) { prevKind = 'plugin'; mkFrame(pluginPage(f, 'moi.test')); return; }
     if (!prevKind) emptyPrev(f['plugin.json'] ? 'Appuie sur ▶ pour tester ce plugin.' : ext === 'py' ? 'Appuie sur ▶ pour exécuter le script Python.' : ext === 'js' ? 'Appuie sur ▶ pour exécuter le script dans le bac à sable.' : f['index.html'] ? 'Ouvre un fichier du site : l\'aperçu se met à jour en tapant.' : 'Pas d\'aperçu pour ce fichier.');
@@ -366,8 +539,8 @@ export default async function (ctx) {
     if (!proj) return; log('sys', '▶ ' + active + ' (Python)');
     let info = null; try { info = await ctx.neo?.pluginMain?.(ctx.id, 'ide:pyinfo'); } catch {}
     if (!info || !info.ok) { log('error', 'Python n\'est pas disponible : ' + (info?.err || 'installe Python 3 (python.org) puis relance l\'Atelier. Cette fonction demande l\'accès complet et un plugin signé.')); return; }
-    const files = {}; for (const [k, v] of Object.entries(proj.files)) if (!k.endsWith('.png')) files[k] = v;
-    try { const r = await ctx.neo.pluginMain(ctx.id, 'ide:python', { files, main: active }); if (r.out) log('log', r.out.replace(/\n$/, '')); if (r.err) log('error', r.err.replace(/\n$/, '')); log('sys', '■ code de sortie ' + r.code + (r.timeout ? ' (interrompu : plus de 10 s)' : '') + ' · ' + info.v); } catch (e) { log('error', 'Exécution impossible : ' + e.message); }
+    const files = {}; if (!proj.disk) for (const [k, v] of Object.entries(proj.files)) if (!k.endsWith('.png')) files[k] = v;
+    try { const r = await ctx.neo.pluginMain(ctx.id, 'ide:python', proj.disk ? { root: proj.disk, main: active } : { files, main: active }); if (r.out) log('log', r.out.replace(/\n$/, '')); if (r.err) log('error', r.err.replace(/\n$/, '')); log('sys', '■ code de sortie ' + r.code + (r.timeout ? ' (interrompu : plus de 10 s)' : '') + ' · ' + info.v); } catch (e) { log('error', 'Exécution impossible : ' + e.message); }
   };
   const testPlugin = () => { if (!proj || !proj.files['plugin.json']) { toast('Ce projet n\'est pas un plugin (plugin.json manquant).', true); return; } const v = validatePlugin(proj.files); if (v.some(x => x.lvl === 'e')) { showValidation(v); return; } prevKind = 'plugin'; hPrev.firstChild.textContent = 'Test du plugin'; log('sys', '▶ test du plugin (bac à sable, dossier de données en mémoire)'); mkFrame(pluginPage(proj.files, 'moi.test')); };
   const run = () => {
@@ -379,7 +552,18 @@ export default async function (ctx) {
     if (ext === 'html') { prevKind = 'web'; mkFrame(inlineProject(f, f[active])); return; }
     toast('Rien à exécuter pour ce type de fichier.');
   };
-  cin.onkeydown = e => { if (e.key !== 'Enter' || !cin.value.trim()) return; const code = cin.value; cin.value = ''; log('sys', '> ' + code); if (iframe) iframe.contentWindow.postMessage({ neoEval: code }, '*'); else { try { const r = (0, eval)('"use strict";' + code); log('result', String(r)); } catch (x) { log('error', x.message); } } };
+  let termMode = false;
+  const termB = mkB('JavaScript', () => { termMode = !termMode && !!proj?.disk; if (!proj?.disk) toast('Le terminal s\'ouvre dans un dossier du PC : « Ouvrir un dossier ».'); setTerm(); }, 'sm', 'Ce que la ligne du bas exécute'); hCon.append(termB);
+  const setTerm = () => { if (!proj?.disk) termMode = false; termB.textContent = termMode ? 'Terminal' : 'JavaScript'; cin.placeholder = termMode ? (navigator.platform.startsWith('Win') ? 'Commande PowerShell dans le dossier ouvert, puis Entrée' : 'Commande dans le dossier ouvert, puis Entrée') : 'Entre une expression JavaScript (aperçu en cours) et appuie sur Entrée'; };
+  const cmdHist = []; let cmdK = 0;
+  cin.addEventListener('keydown', e => { if (!termMode || !cmdHist.length || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return; e.preventDefault(); cmdK = Math.max(0, Math.min(cmdHist.length, cmdK + (e.key === 'ArrowUp' ? -1 : 1))); cin.value = cmdHist[cmdK] || ''; });
+  const shellRun = async line => {
+    const p = proj; log('sys', '$ ' + line); cmdHist.push(line); cmdK = cmdHist.length; cin.disabled = true;
+    try { const r = await callMain('ide:sh', p.disk, line); if (r.out) log('log', r.out.replace(/\n$/, '')); if (r.err) log('error', r.err.replace(/\n$/, '')); log('sys', '■ code ' + r.code + (r.timeout ? ' (arrêté après 60 s)' : '')); }
+    catch (e) { log('error', e.message); }
+    cin.disabled = false; cin.focus(); if (p === proj) syncDisk();
+  };
+  cin.onkeydown = e => { if (e.key !== 'Enter' || !cin.value.trim()) return; const code = cin.value; cin.value = ''; if (termMode && proj?.disk) return shellRun(code); log('sys', '> ' + code); if (iframe) iframe.contentWindow.postMessage({ neoEval: code }, '*'); else { try { const r = (0, eval)('"use strict";' + code); log('result', String(r)); } catch (x) { log('error', x.message); } } };
   /* ----- validation / export ----- */
   const showValidation = res => modal((box, done) => { box.innerHTML = '<h3>Validation du plugin</h3><div class="ide-val"></div>'; const l = box.lastChild; res.forEach(r => { const d = document.createElement('div'); d.className = r.lvl; d.textContent = (r.lvl === 'e' ? '✕ ' : r.lvl === 'w' ? '! ' : '✓ ') + r.msg; l.append(d); }); const c = document.createElement('button'); c.className = 'ide-b acc'; c.textContent = 'Fermer'; c.onclick = () => done(1); box.append(c); });
   const validate = () => { if (!proj) return; saveProj(true); showValidation(validatePlugin(proj.files)); };
@@ -387,23 +571,24 @@ export default async function (ctx) {
     if (!proj) return; saveProj(true); const enc = new TextEncoder(); let name = proj.key, list = [];
     const isPlugin = !!proj.files['plugin.json'];
     if (isPlugin) { const v = validatePlugin(proj.files); if (v.some(x => x.lvl === 'e')) { showValidation(v); toast('Corrige les erreurs avant d\'exporter.', true); return; } const m = JSON.parse(proj.files['plugin.json']); name = m.id + '-' + m.version; }
-    for (const [k, v] of Object.entries(proj.files)) list.push({ name: k, data: enc.encode(v) });
+    for (const [k, v] of Object.entries(proj.files)) if (typeof v === 'string' && !proj.bin?.has(k)) list.push({ name: k, data: enc.encode(v) });
     if (isPlugin && !proj.files['icon.png']) list.push({ name: 'icon.png', data: b64bytes(identicon(JSON.parse(proj.files['plugin.json']).id)) });
     const blob = zip(list), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.zip'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     toast('Archive créée : ' + name + '.zip (' + list.length + ' fichiers)'); log('sys', isPlugin ? 'Archive prête : à joindre à une Release GitHub (topic neodex-plugin).' : 'Projet exporté en .zip');
   };
   /* ----- toolbar ----- */
-  const refreshButtons = () => { bar.innerHTML = ''; bar.append(projSel, mkB('Nouveau', showTemplates, '', 'Nouveau projet depuis un modèle'), mkB('Renommer', renameProject, 'sm'), mkB('Supprimer', delProject, 'sm'), mkB('▶ Exécuter', run, 'run', 'Ctrl + Entrée'), mkB('Enregistrer', () => { saveProj(true); toast('Enregistré'); }, '', 'Ctrl + S')); if (proj && proj.files['plugin.json']) bar.append(mkB('Valider le plugin', validate, '', 'Vérifie plugin.json et le code')); bar.append(mkB('Exporter .zip', exportZip, 'acc'), mkB('Chercher', searchAll, 'sm', 'Chercher dans tout le projet (Ctrl+Maj+F)'), mkB('Importer', importFiles, 'sm', 'Ajouter des fichiers au projet (ou glisse-les sur la liste des fichiers)'), mkB('Commandes', palette, 'sm', 'Ctrl+P'), mkB('Aide', help, 'sm')); bar.prepend(Object.assign(document.createElement('span'), { className: 'ide-logo', textContent: 'ATELIER' })); };
-  const help = () => modal((box, done) => { box.innerHTML = '<h3>Aide de l\'Atelier</h3><div style="line-height:1.55;font-size:13px">Ctrl+P : fichiers et commandes · Ctrl+Maj+F : chercher dans tout le projet · Maj+Alt+F : formater · Ctrl+= / Ctrl+- : taille du texte<br>Ctrl+S enregistre · Ctrl+Entrée exécute · Ctrl+F cherche / remplace · Ctrl+/ commente · Ctrl+D duplique la ligne · Alt+↑/↓ déplace la ligne · Tab indente.<br><br><b>Pages web</b> : crée un projet « Page web » ; l\'aperçu se met à jour en tapant (le CSS et le JS liés sont pris dans le projet).<br><b>JavaScript</b> : « ▶ » exécute le fichier dans un bac à sable (8 s au plus, <code>await</code> permis).<br><b>Python</b> : demande Python 3 installé sur le PC ; le projet entier est écrit dans un dossier temporaire.<br><b>Plugins</b> : modèles « Plugin : … », ▶ teste le plugin dans un cadre isolé avec un dossier de données temporaire, « Valider » vérifie plugin.json, « Exporter .zip » fabrique l\'archive à joindre à une Release GitHub.<br><br>Ton code ne tourne jamais dans NeoDex : il est toujours isolé (<code>sandbox</code>) et ne voit ni tes données ni tes onglets.</div>'; const c = document.createElement('button'); c.className = 'ide-b acc'; c.textContent = 'Fermer'; c.onclick = () => done(1); box.append(c); });
+  const refreshButtons = () => { bar.innerHTML = ''; bar.append(projSel, mkB('Nouveau', showTemplates, '', 'Nouveau projet depuis un modèle'), mkB('Ouvrir un dossier', openFolder, '', 'Travailler sur un dossier de ton PC'), mkB('Renommer', renameProject, 'sm'), proj?.disk ? mkB('Fermer le dossier', delProject, 'sm', 'Les fichiers restent sur ton PC') : mkB('Supprimer', delProject, 'sm'), mkB('▶ Exécuter', run, 'run', 'Ctrl + Entrée'), mkB('Enregistrer', () => { saveProj(true); toast('Enregistré'); }, '', 'Ctrl + S')); if (proj && proj.files['plugin.json']) bar.append(mkB('Valider le plugin', validate, '', 'Vérifie plugin.json et le code')); bar.append(mkB('Exporter .zip', exportZip, 'acc'), mkB('Chercher', searchAll, 'sm', 'Chercher dans tout le projet (Ctrl+Maj+F)'), mkB('Importer', importFiles, 'sm', 'Ajouter des fichiers au projet (ou glisse-les sur la liste des fichiers)'), mkB('Commandes', palette, 'sm', 'Ctrl+P'), mkB('Aide', help, 'sm')); if (proj?.disk) bar.append(mkB('Git', gitPanel, 'sm', 'Fichiers modifiés, comparaison et commit')); bar.prepend(Object.assign(document.createElement('span'), { className: 'ide-logo', textContent: 'ATELIER' })); };
+  const help = () => modal((box, done) => { box.innerHTML = '<h3>Aide de l\'Atelier</h3><div style="line-height:1.55;font-size:13px">Ctrl+P : fichiers et commandes · Ctrl+Maj+F : chercher dans tout le projet · Maj+Alt+F : formater · Ctrl+= / Ctrl+- : taille du texte<br>Ctrl+S enregistre · Ctrl+Entrée exécute · Ctrl+F cherche / remplace · Ctrl+/ commente · Ctrl+D duplique la ligne · Alt+↑/↓ déplace la ligne · Tab indente.<br>Ctrl+Espace : autocomplétion (mots-clés, extraits, API de NeoDex, noms du projet) · Ctrl+G : aller à la ligne · Ctrl+Maj+O : plan du fichier · F2 : renommer le mot partout dans le fichier · Ctrl+H : historique du fichier.<br><b>Problèmes</b> : parenthèses, balises, JSON, deux-points en Python… sont vérifiés pendant que tu tapes ; la ligne s\'allume dans la marge et la barre du bas les liste.<br><b>Dossier du PC</b> : « Ouvrir un dossier » travaille sur tes vrais fichiers (enregistrés dessus), avec <b>Git</b> (fichiers modifiés, comparaison, commit) et un <b>terminal</b> (bouton JavaScript / Terminal de la console). Supprimer un fichier le met à la corbeille.<br><br><b>Pages web</b> : crée un projet « Page web » ; l\'aperçu se met à jour en tapant (le CSS et le JS liés sont pris dans le projet).<br><b>JavaScript</b> : « ▶ » exécute le fichier dans un bac à sable (8 s au plus, <code>await</code> permis).<br><b>Python</b> : demande Python 3 installé sur le PC ; le projet entier est écrit dans un dossier temporaire.<br><b>Plugins</b> : modèles « Plugin : … », ▶ teste le plugin dans un cadre isolé avec un dossier de données temporaire, « Valider » vérifie plugin.json, « Exporter .zip » fabrique l\'archive à joindre à une Release GitHub.<br><br>Ton code ne tourne jamais dans NeoDex : il est toujours isolé (<code>sandbox</code>) et ne voit ni tes données ni tes onglets.</div>'; const c = document.createElement('button'); c.className = 'ide-b acc'; c.textContent = 'Fermer'; c.onclick = () => done(1); box.append(c); });
   /* ----- barre d'état, ligne courante, palette de commandes, recherche dans le projet, formatage, import, zoom ----- */
   const status = document.createElement('div'); status.className = 'ide-status'; pEd.append(status);
+  const stText = document.createElement('span'), probBtn = document.createElement('button'); probBtn.className = 'ide-prob'; probBtn.title = 'Problèmes du fichier'; status.append(stText, probBtn);
   const curLine = document.createElement('div'); curLine.className = 'ide-cur'; codeBox.prepend(curLine);
   const LANG_NAME = { html: 'HTML', css: 'CSS', js: 'JavaScript', json: 'JSON', py: 'Python', md: 'Markdown', txt: 'Texte' };
   const LH = () => Math.round((meta.fs || 13) * 19 / 13);
   const updStatus = () => {
     const v = ta.value, s = ta.selectionStart, line = v.slice(0, s).split('\n').length, col = s - v.lastIndexOf('\n', s - 1), selN = Math.abs(ta.selectionEnd - s);
     curLine.style.top = (8 + (line - 1) * LH() - ta.scrollTop) + 'px'; curLine.style.height = LH() + 'px'; curLine.hidden = !active || ta.disabled;
-    status.textContent = active ? `Ligne ${line}, col ${col}${selN ? ' · ' + selN + ' car. sélectionné' + (selN > 1 ? 's' : '') : ''} · ${LANG_NAME[langOf(active)]} · ${v.split('\n').length} lignes · ${(new Blob([v]).size / 1024).toFixed(1)} Ko · ${dirty.has(active) ? 'modifié' : 'enregistré'} · Ctrl+P : commandes` : 'Aucun fichier ouvert · Ctrl+P : commandes';
+    stText.textContent = active ? `Ligne ${line}, col ${col}${selN ? ' · ' + selN + ' car. sélectionné' + (selN > 1 ? 's' : '') : ''} · ${LANG_NAME[langOf(active)]} · ${v.split('\n').length} lignes · ${(new Blob([v]).size / 1024).toFixed(1)} Ko · ${dirty.has(active) ? 'modifié' : 'enregistré'} · Ctrl+P : commandes` : 'Aucun fichier ouvert · Ctrl+P : commandes';
   };
   ['input', 'keyup', 'click', 'select', 'scroll', 'focus'].forEach(ev => ta.addEventListener(ev, updStatus));
   const goLine = (p, n) => {
@@ -434,6 +619,7 @@ export default async function (ctx) {
     for (const f of list) {
       if (f.size > 1.5e6) { toast(f.name + ' : trop gros (1,5 Mo au plus)', true); continue; }
       const p = f.name.replace(/[^\w.\- ]/g, '_');
+      if (proj.disk) { if (/^image\//.test(f.type)) { toast(f.name + ' : copie les images directement dans le dossier', true); continue; } const t = await f.text(); try { await callMain('ide:write', proj.disk, p, t); } catch (e) { toast(e.message, true); continue; } proj.files[p] = t; n++; continue; }
       proj.files[p] = /^image\//.test(f.type) ? await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); }) : await f.text(); n++;
     }
     if (n) { saveProj(true); renderTree(); toast(n + ' fichier' + (n > 1 ? 's importés' : ' importé')); }
@@ -454,24 +640,192 @@ export default async function (ctx) {
   const palette = () => modal((box, done) => {
     box.innerHTML = '<h3>Aller à un fichier ou lancer une commande</h3>';
     const cmds = [['Exécuter', run], ['Enregistrer', () => { saveProj(true); toast('Enregistré'); }], ['Nouveau fichier', newFile], ['Nouveau projet', showTemplates], ['Formater le fichier', format],
-      ['Chercher dans le projet', searchAll], ['Importer des fichiers', importFiles], ['Valider le plugin', validate], ['Exporter .zip', exportZip], ['Agrandir le texte', () => zoom(1)], ['Réduire le texte', () => zoom(-1)], ['Aide', help]];
+      ['Chercher dans le projet', searchAll], ['Importer des fichiers', importFiles], ['Valider le plugin', validate], ['Exporter .zip', exportZip], ['Agrandir le texte', () => zoom(1)], ['Réduire le texte', () => zoom(-1)], ['Aide', help],
+      ['Ouvrir un dossier du PC', openFolder], ['Aller à la ligne', goToLine], ['Plan du fichier', outline], ['Renommer le mot sous le curseur', renameWord], ['Problèmes', showProblems], ['Historique du fichier', history], ['Autocomplétion', () => acOpen(true)], ...(proj?.disk ? [['Git', gitPanel], ['Relire le dossier', () => syncDisk(true)]] : [])];
     listBox(box, inputOf('Nom de fichier ou commande'), q => { const ql = q.trim().toLowerCase();
       return [...Object.keys(proj?.files || {}).filter(p => p.toLowerCase().includes(ql)).map(p => ['fichier', p, () => selectFile(p)]), ...cmds.filter(([n]) => n.toLowerCase().includes(ql)).map(([n, f]) => ['commande', n, f])].slice(0, 40); }, done);
   });
   root.addEventListener('keydown', e => {  // en capture : avant les raccourcis de l'éditeur
-    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), act = mod && k === 'p' ? palette : mod && e.shiftKey && k === 'f' ? searchAll : e.altKey && e.shiftKey && k === 'f' ? format : mod && (k === '=' || k === '+') ? () => zoom(1) : mod && k === '-' ? () => zoom(-1) : null;
+    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), act = mod && k === 'p' ? palette : mod && e.shiftKey && k === 'o' ? outline : mod && !e.shiftKey && k === 'g' ? goToLine : mod && !e.shiftKey && k === 'h' ? history : e.key === 'F2' && e.target === ta ? renameWord : mod && e.shiftKey && k === 'f' ? searchAll : e.altKey && e.shiftKey && k === 'f' ? format : mod && (k === '=' || k === '+') ? () => zoom(1) : mod && k === '-' ? () => zoom(-1) : null;
     if (act) { e.preventDefault(); e.stopPropagation(); act(); }
   }, true);
   if (meta.fs) zoom(0);
+  /* ----- problèmes ----- */
+  const checkNow = () => {
+    probs = active && proj && !proj.bin?.has(active) && typeof proj.files[active] === 'string' ? diagnose(langOf(active), ta.value) : [];
+    probLines = new Set(probs.map(x => x.line).filter(Boolean)); probKey = probs.map(x => x.line + x.msg).join('|'); refreshEd();
+    probBtn.classList.toggle('bad', probs.length > 0); probBtn.hidden = !active;
+    probBtn.replaceChildren(...(probs.length ? [Object.assign(document.createElement('span'), { textContent: '✕ ' + probs.length + ' ' }), Object.assign(document.createElement('span'), { textContent: probs.length > 1 ? 'problèmes' : 'problème' })] : [Object.assign(document.createElement('span'), { textContent: '✓ Aucun problème' })]));
+  };
+  const probLabel = x => { const d = document.createElement('span'); if (x.ch) d.append(Object.assign(document.createElement('code'), { textContent: x.ch + ' ' })); d.append(Object.assign(document.createElement('span'), { textContent: x.msg })); if (x.open) d.append(' ', Object.assign(document.createElement('code'), { textContent: x.open }), ' (', Object.assign(document.createElement('span'), { textContent: 'ligne' }), ' ' + x.at + ')'); if (x.detail) d.append(' · ', Object.assign(document.createElement('span'), { textContent: x.detail, translate: false })); return d; };
+  const showProblems = () => modal((box, done) => {
+    box.innerHTML = '<h3>Problèmes</h3>'; if (!probs.length) box.append(Object.assign(document.createElement('div'), { textContent: 'Aucun problème dans ce fichier.' }));
+    const list = document.createElement('div'); list.className = 'ide-pal';
+    probs.forEach(x => { const b = document.createElement('button'); b.className = 'ide-pi'; const em = document.createElement('em'); em.textContent = x.line ? 'L' + x.line : '—'; b.append(em, probLabel(x)); b.onclick = () => { done(1); if (x.line) goLine(active, x.line - 1); }; list.append(b); });
+    box.append(list, mkB('Fermer', () => done(1), 'acc'));
+  });
+  probBtn.onclick = showProblems;
+  /* ----- aller à la ligne, plan du fichier, renommer ----- */
+  const goToLine = async () => { if (!active) return; const n = parseInt(await askText('Aller à la ligne', ''), 10); if (n > 0) goLine(active, n - 1); };
+  const outline = () => { if (!active) return; const syms = symbols(langOf(active), ta.value); modal((box, done) => { box.innerHTML = '<h3>Plan du fichier</h3>'; listBox(box, inputOf(syms.length ? 'Filtrer' : 'Rien à lister dans ce fichier'), q => syms.filter(x => x.name.toLowerCase().includes(q.trim().toLowerCase())).map(x => [x.kind + ' · L' + x.line, x.name, () => goLine(active, x.line - 1)]), done); }); };
+  const wordAt = () => { const v = ta.value, s = ta.selectionStart; let a = s, b = s; while (a > 0 && /[\w$]/.test(v[a - 1])) a--; while (b < v.length && /[\w$]/.test(v[b])) b++; return v.slice(a, b); };
+  const renameWord = async () => {
+    if (!active || ta.disabled) return; const w = wordAt(); if (!w) return toast('Place le curseur sur un nom.');
+    const n = await askText('Renommer « ' + w + ' » partout dans ce fichier', w, 'Renommer'); if (!n || n === w) return;
+    const re = new RegExp('(?<![\\w$])' + w.replace(/\$/g, '\\$') + '(?![\\w$])', 'g'), count = (ta.value.match(re) || []).length;
+    const keep = ta.selectionStart; ta.focus(); ta.select(); ins(ta.value.replace(re, () => n)); ta.setSelectionRange(keep, keep); toast(count + ' × ' + w + ' → ' + n);
+  };
+  /* ----- autocomplétion ----- */
+  const ac = document.createElement('div'); ac.className = 'ide-ac'; ac.hidden = true; codeBox.append(ac);
+  let acItems = [], acSel = 0, acPre = '';
+  const charW = (() => { const c = document.createElement('canvas').getContext('2d'); return () => { c.font = (meta.fs || 13) + 'px Consolas, "Courier New", monospace'; return c.measureText('MMMMMMMMMM').width / 10; }; })();
+  const caretXY = pos => { const v = ta.value, line = v.slice(0, pos).split('\n').length - 1, col = pos - (v.lastIndexOf('\n', pos - 1) + 1); return { x: 10 + col * charW() - ta.scrollLeft, y: 8 + line * LH() - ta.scrollTop }; };
+  const wordsCache = { k: '', set: new Set() };
+  const projectWords = lang => {
+    const k = (proj?.key || '') + lang + Object.values(proj?.files || {}).reduce((n, t) => n + (typeof t === 'string' ? t.length : 0), 0);
+    if (wordsCache.k === k) return wordsCache.set; const set = new Set();
+    for (const [p, t] of Object.entries(proj?.files || {})) if (typeof t === 'string' && !t.startsWith('data:') && t.length < 400000 && langOf(p) === lang) for (const m of t.matchAll(/[A-Za-z_$][\w$]{2,}/g)) set.add(m[0]);
+    wordsCache.k = k; wordsCache.set = set; return set;
+  };
+  const acClose = () => { ac.hidden = true; acItems = []; };
+  const acDraw = () => {
+    ac.replaceChildren(...acItems.map((it, k) => { const b = document.createElement('button'); b.className = 'ide-pi' + (k === acSel ? ' on' : ''); const em = document.createElement('em'); em.textContent = it.kind; b.append(em, Object.assign(document.createElement('span'), { textContent: it.label, translate: false })); b.onmousedown = e => { e.preventDefault(); acAccept(it); }; return b; }));
+    ac.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+  };
+  const acOpen = force => {
+    if (!active || ta.disabled || ta.selectionStart !== ta.selectionEnd) return acClose();
+    const s = ta.selectionStart, lang = langOf(active); acPre = /[\w$.-]*$/.exec(ta.value.slice(Math.max(0, s - 80), s))[0];
+    if (lang !== 'css') acPre = acPre.replace(/^.*-/, ''); if (lang !== 'js') acPre = acPre.replace(/^.*\./, '');
+    if (!force && acPre.replace(/^.*\./, '').length < 2 && !(lang === 'js' && /^ctx\.$|\.\w*$/.test(acPre) && acPre.startsWith('ctx'))) return acClose();
+    acItems = complete(lang, acPre, projectWords(lang)); acSel = 0;
+    if (!acItems.length) return acClose();
+    const p = caretXY(s - acPre.length); ac.hidden = false; acDraw();
+    ac.style.left = Math.max(0, Math.min(p.x, codeBox.clientWidth - 260)) + 'px'; ac.style.top = (p.y + LH() + 230 > codeBox.clientHeight && p.y > 240 ? p.y - Math.min(228, ac.offsetHeight) : p.y + LH()) + 'px';
+  };
+  const acAccept = it => {
+    const s = ta.selectionStart, from = s - acPre.length, v = ta.value, ind = /^[ \t]*/.exec(v.slice(v.lastIndexOf('\n', from - 1) + 1))[0];
+    const text = it.insert.replace(/\n/g, '\n' + ind), mark = text.indexOf('$0'), clean = text.replace('$0', '');
+    ta.focus(); ta.setSelectionRange(from, s); ins(clean); if (mark >= 0) ta.setSelectionRange(from + mark, from + mark);
+    acClose(); onEdit();
+  };
+  codeBox.addEventListener('keydown', e => {
+    if (!ac.hidden) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); acSel = (acSel + (e.key === 'ArrowDown' ? 1 : -1) + acItems.length) % acItems.length; acDraw(); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); acAccept(acItems[acSel]); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); acClose(); return; }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === ' ') { e.preventDefault(); e.stopPropagation(); acOpen(true); }
+  }, true);
+  ta.addEventListener('input', e => { if (e.inputType === 'insertText' && (e.data || '').length === 1 && /[\w$.-]/.test(e.data)) acOpen(false); else if (!ac.hidden && e.inputType === 'deleteContentBackward') acOpen(false); else acClose(); });
+  ta.addEventListener('blur', () => setTimeout(acClose, 150)); ta.addEventListener('mousedown', acClose); ta.addEventListener('scroll', () => { if (!ac.hidden) acOpen(true); });  // la liste suit le texte qui défile
+  /* ----- parenthèse correspondante ----- */
+  const bm = [0, 1].map(() => { const d = document.createElement('div'); d.className = 'ide-bm'; d.hidden = true; codeBox.append(d); return d; });
+  const matchBr = () => {
+    bm.forEach(d => { d.hidden = true; }); if (!active || ta.disabled || ta.selectionStart !== ta.selectionEnd) return;
+    const v = ta.value, s = ta.selectionStart, i = '([{}])'.includes(v[s - 1]) ? s - 1 : '([{}])'.includes(v[s]) ? s : -1; if (i < 0) return;
+    const j = matchBracket(v, i); if (j < 0) return; const w = charW();
+    [i, j].forEach((k, n) => { const p = caretXY(k); Object.assign(bm[n].style, { left: p.x + 'px', top: p.y + 'px', width: w + 'px', height: LH() + 'px' }); bm[n].hidden = false; });
+  };
+  ['keyup', 'click', 'input', 'scroll'].forEach(ev => ta.addEventListener(ev, matchBr));
+  /* ----- historique local de chaque fichier ----- */
+  const hist = {};
+  const histOf = async k => hist[k] ??= (await ctx.folder.read('h_' + k).catch(() => null)) || {};
+  // une version gardée à chaque Ctrl+S, et au plus une toutes les 2 minutes en enregistrement automatique ; 15 par fichier
+  const snap = async (p, f, force) => {
+    const text = p.files[f]; if (typeof text !== 'string' || text.length > 300000 || text.startsWith('data:')) return;
+    const h = await histOf(p.key), list = h[f] ||= [], last = list[list.length - 1];
+    if (last && last.text === text) return; if (!force && last && Date.now() - last.t < 120000) return;
+    list.push({ t: Date.now(), text }); if (list.length > 15) list.splice(0, list.length - 15);
+    ctx.folder.write('h_' + p.key, h).catch(() => {});
+  };
+  const diffView = (box, a, b) => {
+    const d = lineDiff(a, b), el = document.createElement('div'); el.className = 'ide-diff'; let shown = 0;
+    d.forEach((x, k) => {
+      const near = x.t !== ' ' || d.slice(Math.max(0, k - 2), k + 3).some(y => y.t !== ' ');
+      if (!near) { if (el.lastChild?.className !== 'g') el.append(Object.assign(document.createElement('div'), { className: 'g', textContent: '⋯' })); return; }
+      el.append(Object.assign(document.createElement('div'), { className: x.t === '+' ? 'a' : x.t === '-' ? 'd' : '', textContent: x.t + ' ' + x.s, translate: false })); shown++;
+    });
+    if (!d.some(x => x.t !== ' ')) el.replaceChildren(Object.assign(document.createElement('div'), { className: 'g', textContent: 'Aucune différence.' }));
+    box.append(el); return d;
+  };
+  const counts = d => '+' + d.filter(x => x.t === '+').length + ' −' + d.filter(x => x.t === '-').length;
+  const history = async () => {
+    if (!proj || !active || typeof proj.files[active] !== 'string') return; const p = proj, f = active, list = ((await histOf(p.key))[f] || []).slice().reverse();
+    modal((box, done) => {
+      box.innerHTML = '<h3>Historique du fichier</h3>';
+      box.append(Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: list.length ? 'Une version est gardée à chaque Ctrl+S (15 au plus). Clique pour comparer avec le texte actuel.' : 'Pas encore de version gardée : elles arrivent à chaque Ctrl+S.' }));
+      const l = document.createElement('div'); l.className = 'ide-pal';
+      list.forEach(v => { const b = document.createElement('button'); b.className = 'ide-pi'; const em = document.createElement('em'); em.textContent = new Date(v.t).toLocaleString(); b.append(em, counts(lineDiff(v.text, p.files[f]))); b.onclick = () => { done(1); compareVersion(p, f, v); }; l.append(b); });
+      box.append(l, mkB('Fermer', () => done(1), 'acc'));
+    });
+  };
+  const compareVersion = (p, f, v) => modal((box, done) => {
+    box.style.width = 'min(980px,96vw)'; box.innerHTML = '<h3></h3>'; box.firstChild.textContent = f + ' · ' + new Date(v.t).toLocaleString();
+    box.append(Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: 'En rouge : la version gardée · en vert : le texte actuel' }));
+    diffView(box, v.text, p.files[f]);
+    const r = document.createElement('div'); r.className = 'ide-row';
+    r.append(mkB('Restaurer cette version', () => { done(1); if (proj !== p) return; selectFile(f); ta.focus(); ta.select(); ins(v.text); toast('Version restaurée (Ctrl+Z pour annuler)'); }, 'acc'), mkB('Fermer', () => done(1)));
+    box.append(r);
+  });
+  /* ----- dossiers du PC ----- */
+  meta.disks ||= [];
+  const addDiskProject = d => { projects[d.key] = { name: d.name, key: d.key, disk: d.root, files: {}, bin: new Set(), loaded: false }; if (!meta.projects.includes(d.key)) meta.projects.push(d.key); };
+  meta.disks.forEach(addDiskProject);
+  const readDisk = async (p, f) => { try { const c = await callMain('ide:read', p.disk, f); if (typeof c.text === 'string') { p.files[f] = c.text; p.bin.delete(f); } else { p.files[f] = ''; p.bin.add(f); } } catch (e) { p.files[f] = ''; p.bin.add(f); toast(f + ' : ' + e.message, true); } };
+  const addEntry = (p, f, size) => { if (TEXT_EXT.test(f) && size <= 2e6) p.files[f] = null; else { p.files[f] = ''; p.bin.add(f); } };
+  // la liste des fichiers, puis le contenu : tout de suite pour un petit dossier, à l'ouverture de chaque fichier pour un gros
+  const loadDisk = async p => {
+    const r = await callMain('ide:ls', p.disk); p.files = {}; p.bin = new Set();
+    for (const f of r.files) addEntry(p, f.p, f.size);
+    const todo = Object.keys(p.files).filter(f => p.files[f] === null), eager = todo.length <= 400 ? todo : todo.filter(f => !f.includes('/'));
+    for (let k = 0; k < eager.length; k += 16) await Promise.all(eager.slice(k, k + 16).map(f => readDisk(p, f)));
+    p.loaded = true; if (r.truncated) toast('Gros dossier : seuls les 3000 premiers fichiers sont listés.');
+    if (todo.length > 400) log('sys', 'Gros dossier : le contenu de chaque fichier est lu à son ouverture (la recherche porte sur les fichiers déjà ouverts).');
+  };
+  const syncDisk = async (say) => {
+    const p = proj; if (!p?.disk) return; let r; try { r = await callMain('ide:ls', p.disk); } catch (e) { return toast(e.message, true); }
+    const now = new Set(r.files.map(f => f.p)); let add = 0, gone = 0;
+    for (const f of r.files) if (!(f.p in p.files)) { addEntry(p, f.p, f.size); add++; }
+    for (const f of Object.keys(p.files)) if (!now.has(f)) { delete p.files[f]; p.bin.delete(f); closeTabIf(f); gone++; }
+    for (const f of Object.keys(p.files)) if (typeof p.files[f] === 'string' && !dirty.has(f) && !p.bin.has(f) && openTabs.includes(f)) { const old = p.files[f]; await readDisk(p, f); if (f === active && p.files[f] !== old && proj === p) loadFile(); }
+    if (proj === p) renderTree(); if (say) toast('Dossier relu : ' + add + ' ajouté(s), ' + gone + ' retiré(s)');
+  };
+  const openAny = async k => {
+    const p = projects[k]; if (p?.disk && !p.loaded) { emptyPrev('Lecture du dossier…'); try { await loadDisk(p); } catch (e) { toast('Dossier illisible : ' + e.message, true); } }
+    openProject(k); setTerm();
+  };
+  const openFolder = async () => {
+    let d; try { d = await callMain('ide:pickdir'); } catch (e) { toast('Ouvrir un dossier demande l\'Atelier signé avec l\'accès complet (NeoStore → Autorisations).', true); return; }
+    if (!d) return; let x = meta.disks.find(y => y.root === d);
+    if (!x) { x = { key: 'dir-' + slug(d.split(/[\\/]/).pop()) + '-' + Date.now().toString(36), name: d.split(/[\\/]/).pop() || d, root: d }; meta.disks.push(x); addDiskProject(x); saveMeta(); }
+    await openAny(x.key);
+  };
+  /* ----- Git (dossier du PC) ----- */
+  const gitPanel = () => { const p = proj; if (!p?.disk) return; modal(async (box, done) => {
+    box.innerHTML = '<h3>Git</h3>'; const info = document.createElement('div'); info.style.cssText = 'font-size:13px;color:var(--sub)'; info.textContent = 'Lecture…'; box.append(info);
+    let st; try { st = await callMain('ide:git', p.disk); } catch (e) { info.textContent = e.message; return box.append(mkB('Fermer', () => done(1), 'acc')); }
+    if (!st.repo) { info.textContent = 'Ce dossier n\'est pas un dépôt git.'; return box.append(Object.assign(document.createElement('div'), { className: 'ide-row' }), mkB('Créer un dépôt (git init)', async () => { const r = await callMain('ide:sh', p.disk, 'git init'); log('sys', (r.out || r.err).trim()); done(1); gitPanel(); }, 'acc'), mkB('Fermer', () => done(1))); }
+    info.replaceChildren(Object.assign(document.createElement('span'), { textContent: 'Branche : ' }), Object.assign(document.createElement('b'), { textContent: st.branch, translate: false }), ' · ' + st.files.length + ' ', Object.assign(document.createElement('span'), { textContent: st.files.length > 1 ? 'fichiers modifiés' : 'fichier modifié' }));
+    const l = document.createElement('div'); l.className = 'ide-git';
+    st.files.forEach(x => { const b = document.createElement('button'); b.className = 'ide-pi'; const em = document.createElement('em'); em.textContent = x.st.trim() || '?'; b.title = { M: 'modifié', A: 'ajouté', D: 'supprimé', R: 'renommé', '?': 'nouveau' }[x.st.trim()[0]] || ''; b.append(em, Object.assign(document.createElement('span'), { textContent: x.p, translate: false })); b.onclick = async () => { const head = await callMain('ide:githead', p.disk, x.p).catch(() => ({ text: '' })); if (p.files[x.p] === null) await readDisk(p, x.p); modal((b2, d2) => { b2.style.width = 'min(980px,96vw)'; b2.innerHTML = '<h3></h3>'; b2.firstChild.textContent = x.p; b2.append(Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: 'En rouge : le dernier commit · en vert : le fichier maintenant' })); diffView(b2, head.text, p.bin.has(x.p) ? '' : p.files[x.p] ?? ''); b2.append(mkB('Fermer', () => d2(1), 'acc')); }); }; l.append(b); });
+    if (!st.files.length) l.append(Object.assign(document.createElement('div'), { className: 'ide-pi', textContent: 'Rien à valider : tout est déjà dans le dernier commit.' }));
+    const msg = inputOf('Message du commit'), r = document.createElement('div'); r.className = 'ide-row';
+    const go = async () => { saveProj(true); const c = await callMain('ide:commit', p.disk, msg.value).catch(e => ({ code: -1, err: e.message })); log(c.code === 0 ? 'sys' : 'error', ((c.out || '') + (c.err || '')).trim()); if (c.code === 0) { toast('Commit fait'); done(1); } };
+    msg.onkeydown = e => { if (e.key === 'Enter' && msg.value.trim()) go(); };
+    r.append(msg, mkB('Valider (commit)', () => msg.value.trim() ? go() : toast('Écris un message de commit.', true), 'acc'));
+    box.append(l, ...(st.files.length ? [r] : []), Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: 'Pousser ou tirer : tape git push ou git pull dans le terminal de la console.' }), mkB('Fermer', () => done(1)));
+    setTimeout(() => msg.focus(), 30);
+  }); };
+  root.__ide = { diagnose, symbols, complete, md2html, lineDiff, matchBracket, get probs() { return probs; }, get proj() { return proj; }, acOpen, get ac() { return acItems.map(x => x.label); }, acAccept: k => acAccept(acItems[k]), createProject, selectFile, snap, histOf, openAny, loadDisk, addTestDir: async d => { await callMain('ide:testroot', d); const x = { key: 'dir-test', name: 'test', root: d }; meta.disks.push(x); addDiskProject(x); await openAny(x.key); }, shellRun, gitStatus: () => callMain('ide:git', proj.disk), ta, saveProj, renameWord, wordAt, closeDisk: delProject };
   /* ----- splitter ----- */
   let rw = meta.rw || 42; main.style.setProperty('--rw', rw + '%');
   const split = document.createElement('div'); split.className = 'ide-split'; split.style.cssText = 'position:absolute;width:8px;top:0;bottom:0;cursor:col-resize;z-index:5'; split.title = 'Glisse pour redimensionner';
   /* ----- start ----- */
   refreshButtons(); refreshProjSel();
   if (!meta.projects.length) { const k = 'bienvenue'; projects[k] = { name: 'Bienvenue', key: k, files: JSON.parse(JSON.stringify(TEMPLATES[0].files)), created: Date.now(), updated: Date.now() }; meta.projects.push(k); await ctx.folder.write('p_' + k, projects[k]); }
-  openProject(meta.cur && projects[meta.cur] ? meta.cur : meta.projects[0]);
+  await openAny(meta.cur && projects[meta.cur] ? meta.cur : meta.projects[0]);
   log('sys', 'Atelier prêt. Ctrl+S enregistre, Ctrl+Entrée exécute.');
-  const onBeforeClose = () => { saveProj(true); killPreview(); };
+  const onBeforeClose = () => { saveProj(true); killPreview(); acClose(); };
   ctx.onClose?.(onBeforeClose);
   if (globalThis.__ideTest) globalThis.__ideTest = { get proj() { return proj; }, projects, meta, validatePlugin, zip, CRC, highlight, inlineProject, TEMPLATES, run, selectFile, createProject, openProject, log, con, ta, exportZip, identicon, b64bytes };
 }

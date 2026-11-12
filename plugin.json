@@ -1,9 +1,9 @@
 {
   "id": "neodex.atelier",
   "name": "Atelier",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "author": "NDesumeur",
-  "description": "L'environnement de développement de NeoDex : projets et fichiers, éditeur avec coloration, recherche dans tout le projet et raccourcis, aperçu web mis à jour en tapant, console, scripts JavaScript dans un bac à sable et Python avec celui de ton PC. Modèles de plugins prêts à tester dans un cadre isolé, validation de plugin.json et export en .zip pour publier.",
+  "description": "L'environnement de développement de NeoDex : ouvre un dossier de ton PC ou un projet de l'Atelier. Éditeur avec coloration, autocomplétion (mots-clés, extraits, API de NeoDex) et problèmes signalés pendant que tu tapes, plan du fichier, recherche dans tout le projet, historique de chaque fichier, Git (fichiers modifiés, comparaison, commit) et terminal. Aperçu web et Markdown mis à jour en tapant, console, scripts JavaScript dans un bac à sable et Python avec celui de ton PC. Modèles de plugins prêts à tester dans un cadre isolé, validation de plugin.json et export en .zip pour publier.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "atelier",
@@ -13,6 +13,10 @@
   "syncMode": "fusion",
   "syncInfo": "Tes créations.",
   "mobile": false,
+  "compatibility": [
+    "windows",
+    "linux"
+  ],
   "system": false,
   "dependencies": {},
   "main": "main.js",
