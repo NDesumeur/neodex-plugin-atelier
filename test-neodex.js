@@ -12,6 +12,8 @@ module.exports = async ({ pj, js, sleep }) => {
   await eq(`${I}.diagnose('py', 'def f()\\n    return 1\\nif x:\\nprint(2)').map(x => x.line)`, [1, 3], 'Python');
   await eq(`${I}.diagnose('html', '<div><p>a<span>b</div><ul><li>c</ul></b>').map(x => x.ch + x.msg)`, ['<span>jamais fermé', '</b>sans balise ouvrante'], 'HTML');
   await eq(`${I}.diagnose('css', 'a { color: red;\\nb { }').length`, 1, 'CSS');
+  // la taille du texte de l'éditeur : A+ puis A− dans la barre d'état
+  await eq(`(() => { const r = document.querySelector('.ide'), b = r.querySelectorAll('.ide-fs button'), v = () => parseInt(r.querySelector('.ide-fs b').textContent); const f0 = v(); b[1].click(); const f1 = v(), css = r.style.getPropertyValue('--fs'); b[0].click(); return [f1 - f0, css === f1 + 'px', v() === f0]; })()`, [1, true, true], 'taille du texte');
   // plan, autocomplétion, Markdown, comparaison, parenthèses
   await eq(`${I}.symbols('js', 'export default async function main(ctx) {\\n  const go = () => 1;\\n}\\nclass Jeu {\\n  tick(dt) {\\n  }\\n}').map(x => x.kind + ':' + x.name)`, ['fonction:main', 'fonction:go', 'classe:Jeu', 'méthode:tick'], 'plan JS');
   await eq(`${I}.complete('js', 'ctx.fo').map(x => x.label)`, ['ctx.folder.read', 'ctx.folder.write', 'ctx.folder.remove', 'ctx.folder.list'], 'API NeoDex');

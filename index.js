@@ -3,30 +3,30 @@
 // modèles de projets, création / test / validation / export de plugins NeoDex.
 // Les projets sont dans le dossier du plugin (sauvegardé et synchronisé par NeoDex). Ton code ne tourne jamais dans NeoDex : toujours dans un cadre isolé.
 const CSS = `
-.ide{--bg:#0d0620;--bg2:#120a2c;--bg3:#1a1240;--line:#3a2a6e;--hi:#8a5cf0;--acc:#ff5ad9;--txt:#f3eaff;--sub:#9a88c4;--ok:#5be37d;--warn:#ffd07a;--err:#ff6b6b;display:flex;flex-direction:column;gap:8px;height:calc(100vh - 110px);min-height:520px;color:var(--txt);font-family:var(--text,'Pixelify Clair',monospace);font-size:14px}
+.ide{--bg:#0d0620;--bg2:#120a2c;--bg3:#1a1240;--line:#3a2a6e;--hi:#8a5cf0;--acc:#ff5ad9;--txt:#f3eaff;--sub:#9a88c4;--ok:#5be37d;--warn:#ffd07a;--err:#ff6b6b;display:flex;flex-direction:column;gap:8px;height:calc(100vh - 110px);min-height:520px;color:var(--txt);font-family:var(--text,'Pixelify Clair',monospace);font-size:16px}
 .ide *{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--line) var(--bg)}
 .ide button{font:inherit;color:inherit;cursor:var(--cp,pointer)}
 .ide-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 8px;background:var(--bg3);box-shadow:0 0 0 2px var(--line),0 3px 0 2px #05010b}
-.ide-b{border:0;background:#241a52;padding:6px 10px;font-weight:600;font-size:13px;box-shadow:0 0 0 2px var(--line),0 3px 0 2px #05010b;margin:0 2px 3px 0;white-space:nowrap}
+.ide-b{border:0;background:#241a52;padding:6px 10px;font-weight:600;font-size:15px;box-shadow:0 0 0 2px var(--line),0 3px 0 2px #05010b;margin:0 2px 3px 0;white-space:nowrap}
 .ide-b:hover{background:#2f2268;box-shadow:0 0 0 2px var(--hi),0 3px 0 2px #05010b}.ide-b:active{transform:translateY(2px)}
-.ide-b.run{background:var(--ok);color:#06240f}.ide-b.acc{background:var(--acc);color:#2a0a28}.ide-b.sm{padding:3px 7px;font-size:12px}
+.ide-b.run{background:var(--ok);color:#06240f}.ide-b.acc{background:var(--acc);color:#2a0a28}.ide-b.sm{padding:3px 7px;font-size:14px}
 .ide-b[disabled]{opacity:.4;pointer-events:none}
 .ide-sel,.ide-in{background:#0a0418;border:0;color:#fff;padding:6px 8px;font:inherit;box-shadow:inset 0 0 0 2px var(--line);outline:0}.ide-in:focus,.ide-sel:focus{box-shadow:inset 0 0 0 2px var(--hi)}
 .ide-main{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr) var(--rw,42%);gap:8px}
 .ide-pane{background:var(--bg2);box-shadow:0 0 0 2px var(--line),0 3px 0 2px #05010b;display:flex;flex-direction:column;min-height:0;min-width:0}
-.ide-ph{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg3);font:9px var(--title,monospace);letter-spacing:1px;color:var(--acc);text-transform:uppercase;flex:none}
+.ide-ph{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg3);font:11px var(--title,monospace);letter-spacing:1px;color:var(--acc);text-transform:uppercase;flex:none}
 .ide-tree{flex:1;overflow:auto;padding:4px 0}
-.ide-f{display:flex;align-items:center;gap:6px;padding:4px 8px;white-space:nowrap;cursor:var(--cp,pointer);font-size:13px}
+.ide-f{display:flex;align-items:center;gap:6px;padding:4px 8px;white-space:nowrap;cursor:var(--cp,pointer);font-size:15px}
 .ide-f:hover{background:#241a52}.ide-f.on{background:var(--hi);color:#fff}
-.ide-f i{font-style:normal;width:16px;text-align:center;font-size:10px;font-weight:800;color:#10061c;background:var(--c,#9a88c4);padding:1px 0}
-.ide-f .x{margin-left:auto;opacity:0;font-size:11px}.ide-f:hover .x{opacity:.8}
+.ide-f i{font-style:normal;width:16px;text-align:center;font-size:12px;font-weight:800;color:#10061c;background:var(--c,#9a88c4);padding:1px 0}
+.ide-f .x{margin-left:auto;opacity:0;font-size:13px}.ide-f:hover .x{opacity:.8}
 .ide-tabs{display:flex;overflow-x:auto;flex:none;background:var(--bg3)}
-.ide-t{display:flex;align-items:center;gap:6px;padding:6px 10px;border:0;background:none;white-space:nowrap;font-size:13px;color:var(--sub);border-bottom:3px solid transparent}
+.ide-t{display:flex;align-items:center;gap:6px;padding:6px 10px;border:0;background:none;white-space:nowrap;font-size:15px;color:var(--sub);border-bottom:3px solid transparent}
 .ide-t.on{color:#fff;background:var(--bg2);border-bottom-color:var(--acc)}.ide-t b{font-weight:800;color:var(--warn)}
 .ide-ed{position:relative;flex:1;min-height:0;display:flex;background:#0b0520}
-.ide-gut{flex:none;width:44px;overflow:hidden;padding:8px 6px 8px 0;text-align:right;color:#5e4d85;font:var(--fs,13px)/var(--lh,19px) Consolas,'Courier New',monospace;user-select:none;background:#0d0626;white-space:pre}
+.ide-gut{flex:none;width:52px;overflow:hidden;padding:8px 6px 8px 0;text-align:right;color:#5e4d85;font:var(--fs,15px)/var(--lh,22px) Consolas,'Courier New',monospace;user-select:none;background:#0d0626;white-space:pre}
 .ide-code{position:relative;flex:1;min-width:0}
-.ide-code pre,.ide-code textarea{position:absolute;inset:0;margin:0;padding:8px 10px;font:var(--fs,13px)/var(--lh,19px) Consolas,'Courier New',monospace;white-space:pre;overflow:auto;tab-size:2;border:0;outline:0;letter-spacing:0}
+.ide-code pre,.ide-code textarea{position:absolute;inset:0;margin:0;padding:8px 10px;font:var(--fs,15px)/var(--lh,22px) Consolas,'Courier New',monospace;white-space:pre;overflow:auto;tab-size:2;border:0;outline:0;letter-spacing:0}
 .ide-code pre{pointer-events:none;color:#e8def8;background:none}
 .ide-code textarea{color:transparent;caret-color:#fff;background:transparent;resize:none;-webkit-text-fill-color:transparent}
 .ide-code textarea::selection{background:rgba(138,92,240,.45);-webkit-text-fill-color:transparent}
@@ -35,38 +35,39 @@ const CSS = `
 .ide-right{display:grid;grid-template-rows:minmax(0,1.3fr) minmax(0,1fr);gap:8px;min-height:0;min-width:0}
 .ide-prev{flex:1;border:0;background:#fff;min-height:0;width:100%}
 .ide-prev-empty{flex:1;display:grid;place-items:center;color:var(--sub);text-align:center;padding:14px;line-height:1.5;background:#0b0520}
-.ide-con{flex:1;overflow:auto;padding:6px 8px;font:12px/1.5 Consolas,'Courier New',monospace;white-space:pre-wrap;word-break:break-word}
+.ide-con{flex:1;overflow:auto;padding:6px 8px;font:14px/1.5 Consolas,'Courier New',monospace;white-space:pre-wrap;word-break:break-word}
 .ide-con div{padding:1px 0;border-bottom:1px dashed #2a1d52}.ide-con .e{color:var(--err)}.ide-con .w{color:var(--warn)}.ide-con .i{color:var(--sub)}.ide-con .o{color:var(--ok)}
 .ide-conin{display:flex;gap:6px;padding:5px;background:var(--bg3);flex:none}.ide-conin input{flex:1}
-.ide-val div{padding:5px 8px;border-bottom:1px dashed #2a1d52;font-size:13px;line-height:1.35}.ide-val .e{color:var(--err)}.ide-val .w{color:var(--warn)}.ide-val .o{color:var(--ok)}
+.ide-val div{padding:5px 8px;border-bottom:1px dashed #2a1d52;font-size:15px;line-height:1.35}.ide-val .e{color:var(--err)}.ide-val .w{color:var(--warn)}.ide-val .o{color:var(--ok)}
 .ide-mod{position:fixed;inset:0;z-index:300;background:rgba(5,1,12,.82);display:grid;place-items:center;padding:12px}
 .ide-box{background:var(--bg2);box-shadow:0 0 0 3px var(--hi),0 8px 0 3px #05010b;padding:16px;width:min(620px,96vw);max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
-.ide-box h3{margin:0;font:12px var(--title,monospace);color:var(--acc);line-height:1.5}
+.ide-box h3{margin:0;font:14px var(--title,monospace);color:var(--acc);line-height:1.5}
 .ide-tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
-.ide-tpl{border:0;background:var(--bg3);padding:10px;text-align:left;box-shadow:0 0 0 2px var(--line);display:flex;flex-direction:column;gap:4px}.ide-tpl:hover{box-shadow:0 0 0 2px var(--hi)}.ide-tpl b{color:#fff}.ide-tpl span{color:var(--sub);font-size:12px;line-height:1.35}
+.ide-tpl{border:0;background:var(--bg3);padding:10px;text-align:left;box-shadow:0 0 0 2px var(--line);display:flex;flex-direction:column;gap:4px}.ide-tpl:hover{box-shadow:0 0 0 2px var(--hi)}.ide-tpl b{color:#fff}.ide-tpl span{color:var(--sub);font-size:14px;line-height:1.35}
 .ide-split{cursor:col-resize}
 @media (max-width:1100px){.ide{height:auto}.ide-main{grid-template-columns:170px minmax(0,1fr);grid-template-rows:minmax(320px,calc(100vh - 210px)) 340px}.ide-right{grid-column:1/-1;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}}
-.ide-status{flex:none;display:flex;gap:10px;padding:4px 10px;background:var(--bg3);font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;box-shadow:inset 0 2px 0 var(--line)}
+.ide-status{flex:none;display:flex;gap:10px;padding:4px 10px;background:var(--bg3);font-size:14px;color:var(--sub);white-space:nowrap;overflow:hidden;box-shadow:inset 0 2px 0 var(--line)}
 .ide-cur{position:absolute;left:0;right:0;background:rgba(138,92,240,.12);box-shadow:inset 3px 0 0 var(--acc);pointer-events:none}
 .ide-pal{display:flex;flex-direction:column;max-height:50vh;overflow-y:auto;box-shadow:inset 0 0 0 2px var(--line)}
-.ide-pi{border:0;background:none;text-align:left;padding:6px 10px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ide-pi{border:0;background:none;text-align:left;padding:6px 10px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ide-pi:hover,.ide-pi.on{background:var(--hi);color:#fff} .ide-pi em{font-style:normal;color:var(--sub);margin-right:8px}
 .ide-pane.drop{box-shadow:0 0 0 2px var(--acc),0 3px 0 2px #05010b}
 .ide-bar{background:repeating-linear-gradient(90deg,var(--bg3) 0 8px,#1e1548 8px 10px)}
 .ide-ph::before{content:'';width:6px;height:6px;background:var(--acc);box-shadow:2px 2px 0 #8a1a7a;flex:none}
-.ide-logo{font:10px var(--title,monospace);color:#fff;text-shadow:2px 2px 0 var(--acc);padding:0 8px 0 2px;letter-spacing:1px}
+.ide-logo{font:12px var(--title,monospace);color:#fff;text-shadow:2px 2px 0 var(--acc);padding:0 8px 0 2px;letter-spacing:1px}
 .ide-ac{position:absolute;z-index:6;min-width:240px;max-width:440px;max-height:228px;overflow-y:auto;background:var(--bg3);box-shadow:0 0 0 2px var(--hi),0 4px 0 2px #05010b;display:flex;flex-direction:column}
-.ide-ac .ide-pi{padding:4px 10px;font:var(--fs,13px) Consolas,'Courier New',monospace}
+.ide-ac .ide-pi{padding:4px 10px;font:var(--fs,15px) Consolas,'Courier New',monospace}
 .ide-bm{position:absolute;pointer-events:none;box-shadow:inset 0 0 0 1px var(--acc);background:rgba(255,90,217,.18)}
 .ide-gut .gx{color:#fff;background:var(--err)}.ide-gut .gw{color:#10061c;background:var(--warn)}
 .ide-status>span:first-child{overflow:hidden;text-overflow:ellipsis}
-.ide-prob{border:0;background:none;padding:0;margin-left:auto;color:var(--ok);font-size:12px;flex:none}.ide-prob.bad{color:var(--err)}
-.ide-diff{font:12px/1.5 Consolas,'Courier New',monospace;white-space:pre;overflow:auto;max-height:56vh;background:#0b0520;box-shadow:inset 0 0 0 2px var(--line);padding:6px 0}
+.ide-prob{border:0;background:none;padding:0;margin-left:auto;color:var(--ok);font-size:14px;flex:none}.ide-prob.bad{color:var(--err)}
+.ide-diff{font:14px/1.5 Consolas,'Courier New',monospace;white-space:pre;overflow:auto;max-height:56vh;background:#0b0520;box-shadow:inset 0 0 0 2px var(--line);padding:6px 0}
 .ide-diff div{padding:0 10px}.ide-diff .a{background:rgba(91,227,125,.16);color:#c6f7d3}.ide-diff .d{background:rgba(255,107,107,.16);color:#ffcaca}.ide-diff .g{color:var(--sub)}
 .ide-git{display:flex;flex-direction:column;max-height:40vh;overflow-y:auto;box-shadow:inset 0 0 0 2px var(--line)}
 .ide-git .ide-pi em{display:inline-block;width:26px;color:var(--warn)}
 .ide-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.ide-row .ide-in{flex:1;min-width:160px}
-`;
+
+.ide-fs{display:flex;align-items:center;gap:4px;flex:none}.ide-fs button{border:0;background:#241a52;color:var(--txt);padding:0 7px;box-shadow:0 0 0 1px var(--line)}.ide-fs b{min-width:38px;text-align:center;color:var(--txt);font-weight:400}`;
 const EXT_COL = { html: '#ff8a5c', css: '#5cb8ff', js: '#ffd45c', json: '#5be37d', py: '#8be9fd', md: '#c070ff', txt: '#9a88c4', png: '#ff5ad9' };
 const extOf = p => (p.split('.').pop() || '').toLowerCase();
 const langOf = p => ({ html: 'html', htm: 'html', css: 'css', js: 'js', mjs: 'js', json: 'json', py: 'py', md: 'md' })[extOf(p)] || 'txt';
@@ -395,7 +396,7 @@ export default async function (ctx) {
   for (const k of meta.projects) { const p = await ctx.folder.read('p_' + k).catch(() => null); if (p && p.files) projects[k] = p; }
   meta.projects = Object.keys(projects);
   let proj = null, openTabs = [], active = '', dirty = new Set(), saveT = 0, prevT = 0, rightMode = 'preview', prevKind = '';
-  const saveMeta = () => ctx.folder.write('ide', meta).catch(() => {});
+  let metaT = 0; const saveMeta = () => { clearTimeout(metaT); metaT = setTimeout(() => ctx.folder.write('ide', meta).catch(() => {}), 300); };  // regroupées : deux écritures en même temps se gênent sous Windows
   const callMain = (n, ...a) => ctx.neo?.pluginMain ? ctx.neo.pluginMain(ctx.id, n, ...a) : Promise.reject(new Error('le volet système de l\'Atelier n\'est pas chargé'));
   // un dossier du PC s'enregistre dans ses fichiers ; un projet de l'Atelier dans les données de NeoDex
   const saveProj = (now) => { if (!proj) return; clearTimeout(saveT); const go = () => { const p = proj, paths = [...dirty]; p.updated = Date.now(); if (p.disk) Promise.all(paths.filter(f => typeof p.files[f] === 'string').map(f => callMain('ide:write', p.disk, f, p.files[f]))).catch(e => toast('Enregistrement impossible : ' + e.message, true)); else { const { bin, ...keep } = p; ctx.folder.write('p_' + p.key, keep).catch(e => toast('Sauvegarde impossible : ' + e.message, true)); } dirty.clear(); renderTabs(); paths.forEach(f => typeof snap === 'function' && snap(p, f, now)); }; if (now) go(); else saveT = setTimeout(go, 700); };
@@ -465,7 +466,7 @@ export default async function (ctx) {
   const toggleComment = () => { const lang = langOf(active || ''), c = { js: '//', py: '#', css: '', html: '', json: '', md: '' }[lang]; const v = ta.value, [ls, le] = lineRange(), blk = v.slice(ls, le); if (lang === 'css' || lang === 'html') { const [a, b] = lang === 'css' ? ['/* ', ' */'] : ['<!-- ', ' -->']; const t = blk.trim(); const ns = t.startsWith(a.trim()) ? blk.replace(a, '').replace(b, '') : blk.replace(/^(\s*)(.*)$/s, '$1' + a + '$2' + b); ta.setSelectionRange(ls, le); ins(ns); return; } if (!c) return; const lines = blk.split('\n'), all = lines.every(l => !l.trim() || l.trimStart().startsWith(c)); const ns = lines.map(l => !l.trim() ? l : all ? l.replace(c + ' ', '').replace(c, '') : l.replace(/^(\s*)/, '$1' + c + ' ')).join('\n'); ta.setSelectionRange(ls, le); ins(ns); ta.setSelectionRange(ls, ls + ns.length); };
   const moveLines = d => { const v = ta.value, [ls, le] = lineRange(); if (d < 0 && ls === 0) return; if (d > 0 && le >= v.length) return; const blk = v.slice(ls, le); if (d < 0) { const ps = v.lastIndexOf('\n', ls - 2) + 1, prev = v.slice(ps, ls - 1); ta.setSelectionRange(ps, le); ins(blk + '\n' + prev); ta.setSelectionRange(ps, ps + blk.length); } else { const ne = v.indexOf('\n', le + 1), nx = v.slice(le + 1, ne < 0 ? v.length : ne), end = ne < 0 ? v.length : ne; ta.setSelectionRange(ls, end); ins(nx + '\n' + blk); const p = ls + nx.length + 1; ta.setSelectionRange(p, p + blk.length); } };
   /* ----- find / replace ----- */
-  const fi = document.createElement('input'), ri = document.createElement('input'), fc = document.createElement('span'); fi.className = ri.className = 'ide-in'; fi.placeholder = 'Chercher'; ri.placeholder = 'Remplacer par'; fc.style.cssText = 'color:var(--sub);font-size:12px;min-width:60px';
+  const fi = document.createElement('input'), ri = document.createElement('input'), fc = document.createElement('span'); fi.className = ri.className = 'ide-in'; fi.placeholder = 'Chercher'; ri.placeholder = 'Remplacer par'; fc.style.cssText = 'color:var(--sub);font-size:14px;min-width:60px';
   const findNext = (dir = 1) => { const q = fi.value; if (!q) { fc.textContent = ''; return; } const v = ta.value.toLowerCase(), qq = q.toLowerCase(); let idx = dir > 0 ? v.indexOf(qq, ta.selectionEnd) : v.lastIndexOf(qq, ta.selectionStart - 1); if (idx < 0) idx = dir > 0 ? v.indexOf(qq) : v.lastIndexOf(qq); if (idx < 0) { fc.textContent = '0 résultat'; return; } ta.focus(); ta.setSelectionRange(idx, idx + q.length); const before = v.slice(0, idx).split('\n').length; ta.scrollTop = Math.max(0, (before - 6) * 19); syncScroll(); fc.textContent = v.split(qq).length - 1 + ' résultats'; fi.focus(); };
   const replaceAll = () => { if (!fi.value || active == null) return; const re = new RegExp(fi.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); const n = (ta.value.match(re) || []).length; ta.focus(); ta.select(); ins(ta.value.replace(re, () => ri.value)); fc.textContent = n + ' remplacé' + (n > 1 ? 's' : ''); };
   fi.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); findNext(e.shiftKey ? -1 : 1); } if (e.key === 'Escape') { findBar.classList.remove('on'); ta.focus(); } };
@@ -475,7 +476,7 @@ export default async function (ctx) {
   const renderTabs = () => {
     tabs.innerHTML = ''; openTabs = openTabs.filter(p => proj && p in proj.files);
     openTabs.forEach(p => { const b = document.createElement('button'); b.className = 'ide-t' + (p === active ? ' on' : ''); b.innerHTML = '<span></span>' + (dirty.has(p) ? '<b>●</b>' : '') + '<span class="x" style="opacity:.6">✕</span>'; b.firstChild.textContent = p.split('/').pop(); b.title = p; b.onclick = e => { if (e.target.classList.contains('x')) { closeTab(p); } else selectFile(p); }; tabs.append(b); });
-    if (!openTabs.length) { const e = document.createElement('div'); e.style.cssText = 'padding:7px 10px;color:var(--sub);font-size:13px'; e.textContent = 'Aucun fichier ouvert'; tabs.append(e); }
+    if (!openTabs.length) { const e = document.createElement('div'); e.style.cssText = 'padding:7px 10px;color:var(--sub);font-size:15px'; e.textContent = 'Aucun fichier ouvert'; tabs.append(e); }
     if (proj) { meta.open[proj.key] = openTabs; meta.active[proj.key] = active; saveMeta(); }
   };
   const closeTab = p => { const i = openTabs.indexOf(p); openTabs.splice(i, 1); if (active === p) { active = openTabs[Math.min(i, openTabs.length - 1)] || ''; loadFile(); } renderTabs(); };
@@ -489,7 +490,7 @@ export default async function (ctx) {
       r.onclick = ev => { const c = ev.target.className === 'x' ? ev.target.title : ''; if (c === 'Renommer') renameFile(p); else if (c === 'Supprimer') delFile(p); else selectFile(p); };
       tree.append(r);
     });
-    if (!names.length) { const e = document.createElement('div'); e.style.cssText = 'padding:10px;color:var(--sub);font-size:13px'; e.textContent = 'Projet vide'; tree.append(e); }
+    if (!names.length) { const e = document.createElement('div'); e.style.cssText = 'padding:10px;color:var(--sub);font-size:15px'; e.textContent = 'Projet vide'; tree.append(e); }
   };
   const newFile = async () => { if (!proj) return; const n = await askText('Nom du nouveau fichier (ex. app.js, dossier/page.html)'); if (!n) return; const p = n.replace(/\\/g, '/').replace(/^\/+/, ''); if (!/^[\w.\- \/]+$/.test(p) || p.includes('..')) { toast('Nom de fichier invalide.', true); return; } if (p in proj.files) { toast('Ce fichier existe déjà.', true); selectFile(p); return; } if (proj.disk) { try { await callMain('ide:write', proj.disk, p, ''); } catch (e) { toast(e.message, true); return; } } proj.files[p] = ''; saveProj(true); renderTree(); selectFile(p); ta.focus(); };
   const renameFile = async p => { const n = await askText('Renommer « ' + p + ' »', p, 'Renommer'); if (!n || n === p) return; const q = n.replace(/\\/g, '/').replace(/^\/+/, ''); if (!/^[\w.\- \/]+$/.test(q) || q.includes('..') || q in proj.files) { toast('Nom invalide ou déjà pris.', true); return; } if (proj.disk) { try { await callMain('ide:mv', proj.disk, p, q); } catch (e) { toast(e.message, true); return; } } proj.files[q] = proj.files[p]; delete proj.files[p]; openTabs = openTabs.map(x => x === p ? q : x); if (active === p) active = q; saveProj(true); renderTree(); renderTabs(); };
@@ -578,13 +579,16 @@ export default async function (ctx) {
   };
   /* ----- toolbar ----- */
   const refreshButtons = () => { bar.innerHTML = ''; bar.append(projSel, mkB('Nouveau', showTemplates, '', 'Nouveau projet depuis un modèle'), mkB('Ouvrir un dossier', openFolder, '', 'Travailler sur un dossier de ton PC'), mkB('Renommer', renameProject, 'sm'), proj?.disk ? mkB('Fermer le dossier', delProject, 'sm', 'Les fichiers restent sur ton PC') : mkB('Supprimer', delProject, 'sm'), mkB('▶ Exécuter', run, 'run', 'Ctrl + Entrée'), mkB('Enregistrer', () => { saveProj(true); toast('Enregistré'); }, '', 'Ctrl + S')); if (proj && proj.files['plugin.json']) bar.append(mkB('Valider le plugin', validate, '', 'Vérifie plugin.json et le code')); bar.append(mkB('Exporter .zip', exportZip, 'acc'), mkB('Chercher', searchAll, 'sm', 'Chercher dans tout le projet (Ctrl+Maj+F)'), mkB('Importer', importFiles, 'sm', 'Ajouter des fichiers au projet (ou glisse-les sur la liste des fichiers)'), mkB('Commandes', palette, 'sm', 'Ctrl+P'), mkB('Aide', help, 'sm')); if (proj?.disk) bar.append(mkB('Git', gitPanel, 'sm', 'Fichiers modifiés, comparaison et commit')); bar.prepend(Object.assign(document.createElement('span'), { className: 'ide-logo', textContent: 'ATELIER' })); };
-  const help = () => modal((box, done) => { box.innerHTML = '<h3>Aide de l\'Atelier</h3><div style="line-height:1.55;font-size:13px">Ctrl+P : fichiers et commandes · Ctrl+Maj+F : chercher dans tout le projet · Maj+Alt+F : formater · Ctrl+= / Ctrl+- : taille du texte<br>Ctrl+S enregistre · Ctrl+Entrée exécute · Ctrl+F cherche / remplace · Ctrl+/ commente · Ctrl+D duplique la ligne · Alt+↑/↓ déplace la ligne · Tab indente.<br>Ctrl+Espace : autocomplétion (mots-clés, extraits, API de NeoDex, noms du projet) · Ctrl+G : aller à la ligne · Ctrl+Maj+O : plan du fichier · F2 : renommer le mot partout dans le fichier · Ctrl+H : historique du fichier.<br><b>Problèmes</b> : parenthèses, balises, JSON, deux-points en Python… sont vérifiés pendant que tu tapes ; la ligne s\'allume dans la marge et la barre du bas les liste.<br><b>Dossier du PC</b> : « Ouvrir un dossier » travaille sur tes vrais fichiers (enregistrés dessus), avec <b>Git</b> (fichiers modifiés, comparaison, commit) et un <b>terminal</b> (bouton JavaScript / Terminal de la console). Supprimer un fichier le met à la corbeille.<br><br><b>Pages web</b> : crée un projet « Page web » ; l\'aperçu se met à jour en tapant (le CSS et le JS liés sont pris dans le projet).<br><b>JavaScript</b> : « ▶ » exécute le fichier dans un bac à sable (8 s au plus, <code>await</code> permis).<br><b>Python</b> : demande Python 3 installé sur le PC ; le projet entier est écrit dans un dossier temporaire.<br><b>Plugins</b> : modèles « Plugin : … », ▶ teste le plugin dans un cadre isolé avec un dossier de données temporaire, « Valider » vérifie plugin.json, « Exporter .zip » fabrique l\'archive à joindre à une Release GitHub.<br><br>Ton code ne tourne jamais dans NeoDex : il est toujours isolé (<code>sandbox</code>) et ne voit ni tes données ni tes onglets.</div>'; const c = document.createElement('button'); c.className = 'ide-b acc'; c.textContent = 'Fermer'; c.onclick = () => done(1); box.append(c); });
+  const help = () => modal((box, done) => { box.innerHTML = '<h3>Aide de l\'Atelier</h3><div style="line-height:1.55;font-size:15px">Ctrl+P : fichiers et commandes · Ctrl+Maj+F : chercher dans tout le projet · Maj+Alt+F : formater · Ctrl+= / Ctrl+- : taille du texte<br>Ctrl+S enregistre · Ctrl+Entrée exécute · Ctrl+F cherche / remplace · Ctrl+/ commente · Ctrl+D duplique la ligne · Alt+↑/↓ déplace la ligne · Tab indente.<br>Ctrl+Espace : autocomplétion (mots-clés, extraits, API de NeoDex, noms du projet) · Ctrl+G : aller à la ligne · Ctrl+Maj+O : plan du fichier · F2 : renommer le mot partout dans le fichier · Ctrl+H : historique du fichier.<br><b>Problèmes</b> : parenthèses, balises, JSON, deux-points en Python… sont vérifiés pendant que tu tapes ; la ligne s\'allume dans la marge et la barre du bas les liste.<br><b>Dossier du PC</b> : « Ouvrir un dossier » travaille sur tes vrais fichiers (enregistrés dessus), avec <b>Git</b> (fichiers modifiés, comparaison, commit) et un <b>terminal</b> (bouton JavaScript / Terminal de la console). Supprimer un fichier le met à la corbeille.<br><br><b>Pages web</b> : crée un projet « Page web » ; l\'aperçu se met à jour en tapant (le CSS et le JS liés sont pris dans le projet).<br><b>JavaScript</b> : « ▶ » exécute le fichier dans un bac à sable (8 s au plus, <code>await</code> permis).<br><b>Python</b> : demande Python 3 installé sur le PC ; le projet entier est écrit dans un dossier temporaire.<br><b>Plugins</b> : modèles « Plugin : … », ▶ teste le plugin dans un cadre isolé avec un dossier de données temporaire, « Valider » vérifie plugin.json, « Exporter .zip » fabrique l\'archive à joindre à une Release GitHub.<br><br>Ton code ne tourne jamais dans NeoDex : il est toujours isolé (<code>sandbox</code>) et ne voit ni tes données ni tes onglets.</div>'; const c = document.createElement('button'); c.className = 'ide-b acc'; c.textContent = 'Fermer'; c.onclick = () => done(1); box.append(c); });
   /* ----- barre d'état, ligne courante, palette de commandes, recherche dans le projet, formatage, import, zoom ----- */
   const status = document.createElement('div'); status.className = 'ide-status'; pEd.append(status);
   const stText = document.createElement('span'), probBtn = document.createElement('button'); probBtn.className = 'ide-prob'; probBtn.title = 'Problèmes du fichier'; status.append(stText, probBtn);
+  const fsBox = document.createElement('span'), fsVal = document.createElement('b'); fsBox.className = 'ide-fs'; fsVal.textContent = (meta.fs || 15) + ' px';
+  for (const [t, d, tip] of [['A−', -1, 'Réduire le texte (Ctrl+-)'], ['A+', 1, 'Agrandir le texte (Ctrl+=)']]) { const x = document.createElement('button'); x.textContent = t; x.title = tip; x.onclick = () => zoom(d); fsBox.append(x); if (d < 0) fsBox.append(fsVal); }
+  status.append(fsBox);
   const curLine = document.createElement('div'); curLine.className = 'ide-cur'; codeBox.prepend(curLine);
   const LANG_NAME = { html: 'HTML', css: 'CSS', js: 'JavaScript', json: 'JSON', py: 'Python', md: 'Markdown', txt: 'Texte' };
-  const LH = () => Math.round((meta.fs || 13) * 19 / 13);
+  const LH = () => Math.round((meta.fs || 15) * 19 / 13);
   const updStatus = () => {
     const v = ta.value, s = ta.selectionStart, line = v.slice(0, s).split('\n').length, col = s - v.lastIndexOf('\n', s - 1), selN = Math.abs(ta.selectionEnd - s);
     curLine.style.top = (8 + (line - 1) * LH() - ta.scrollTop) + 'px'; curLine.style.height = LH() + 'px'; curLine.hidden = !active || ta.disabled;
@@ -628,7 +632,7 @@ export default async function (ctx) {
   pExp.addEventListener('dragover', e => { e.preventDefault(); pExp.classList.add('drop'); });
   pExp.addEventListener('dragleave', () => pExp.classList.remove('drop'));
   pExp.addEventListener('drop', e => { e.preventDefault(); pExp.classList.remove('drop'); addFiles([...e.dataTransfer.files]); });
-  const zoom = d => { meta.fs = Math.max(10, Math.min(22, (meta.fs || 13) + d)); root.style.setProperty('--fs', meta.fs + 'px'); root.style.setProperty('--lh', LH() + 'px'); saveMeta(); refreshEd(); syncScroll(); updStatus(); };
+  const zoom = d => { meta.fs = Math.max(10, Math.min(28, (meta.fs || 15) + d)); fsVal.textContent = meta.fs + ' px'; root.style.setProperty('--fs', meta.fs + 'px'); root.style.setProperty('--lh', LH() + 'px'); saveMeta(); refreshEd(); syncScroll(); updStatus(); };
   const searchAll = () => modal((box, done) => {
     box.innerHTML = '<h3>Chercher dans tout le projet</h3>';
     listBox(box, inputOf('Texte à chercher (2 caractères au moins)'), q => {
@@ -753,7 +757,7 @@ export default async function (ctx) {
     if (!proj || !active || typeof proj.files[active] !== 'string') return; const p = proj, f = active, list = ((await histOf(p.key))[f] || []).slice().reverse();
     modal((box, done) => {
       box.innerHTML = '<h3>Historique du fichier</h3>';
-      box.append(Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: list.length ? 'Une version est gardée à chaque Ctrl+S (15 au plus). Clique pour comparer avec le texte actuel.' : 'Pas encore de version gardée : elles arrivent à chaque Ctrl+S.' }));
+      box.append(Object.assign(document.createElement('div'), { style: 'font-size:14px;color:var(--sub)', textContent: list.length ? 'Une version est gardée à chaque Ctrl+S (15 au plus). Clique pour comparer avec le texte actuel.' : 'Pas encore de version gardée : elles arrivent à chaque Ctrl+S.' }));
       const l = document.createElement('div'); l.className = 'ide-pal';
       list.forEach(v => { const b = document.createElement('button'); b.className = 'ide-pi'; const em = document.createElement('em'); em.textContent = new Date(v.t).toLocaleString(); b.append(em, counts(lineDiff(v.text, p.files[f]))); b.onclick = () => { done(1); compareVersion(p, f, v); }; l.append(b); });
       box.append(l, mkB('Fermer', () => done(1), 'acc'));
@@ -761,7 +765,7 @@ export default async function (ctx) {
   };
   const compareVersion = (p, f, v) => modal((box, done) => {
     box.style.width = 'min(980px,96vw)'; box.innerHTML = '<h3></h3>'; box.firstChild.textContent = f + ' · ' + new Date(v.t).toLocaleString();
-    box.append(Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: 'En rouge : la version gardée · en vert : le texte actuel' }));
+    box.append(Object.assign(document.createElement('div'), { style: 'font-size:14px;color:var(--sub)', textContent: 'En rouge : la version gardée · en vert : le texte actuel' }));
     diffView(box, v.text, p.files[f]);
     const r = document.createElement('div'); r.className = 'ide-row';
     r.append(mkB('Restaurer cette version', () => { done(1); if (proj !== p) return; selectFile(f); ta.focus(); ta.select(); ins(v.text); toast('Version restaurée (Ctrl+Z pour annuler)'); }, 'acc'), mkB('Fermer', () => done(1)));
@@ -802,18 +806,18 @@ export default async function (ctx) {
   };
   /* ----- Git (dossier du PC) ----- */
   const gitPanel = () => { const p = proj; if (!p?.disk) return; modal(async (box, done) => {
-    box.innerHTML = '<h3>Git</h3>'; const info = document.createElement('div'); info.style.cssText = 'font-size:13px;color:var(--sub)'; info.textContent = 'Lecture…'; box.append(info);
+    box.innerHTML = '<h3>Git</h3>'; const info = document.createElement('div'); info.style.cssText = 'font-size:15px;color:var(--sub)'; info.textContent = 'Lecture…'; box.append(info);
     let st; try { st = await callMain('ide:git', p.disk); } catch (e) { info.textContent = e.message; return box.append(mkB('Fermer', () => done(1), 'acc')); }
     if (!st.repo) { info.textContent = 'Ce dossier n\'est pas un dépôt git.'; return box.append(Object.assign(document.createElement('div'), { className: 'ide-row' }), mkB('Créer un dépôt (git init)', async () => { const r = await callMain('ide:sh', p.disk, 'git init'); log('sys', (r.out || r.err).trim()); done(1); gitPanel(); }, 'acc'), mkB('Fermer', () => done(1))); }
     info.replaceChildren(Object.assign(document.createElement('span'), { textContent: 'Branche : ' }), Object.assign(document.createElement('b'), { textContent: st.branch, translate: false }), ' · ' + st.files.length + ' ', Object.assign(document.createElement('span'), { textContent: st.files.length > 1 ? 'fichiers modifiés' : 'fichier modifié' }));
     const l = document.createElement('div'); l.className = 'ide-git';
-    st.files.forEach(x => { const b = document.createElement('button'); b.className = 'ide-pi'; const em = document.createElement('em'); em.textContent = x.st.trim() || '?'; b.title = { M: 'modifié', A: 'ajouté', D: 'supprimé', R: 'renommé', '?': 'nouveau' }[x.st.trim()[0]] || ''; b.append(em, Object.assign(document.createElement('span'), { textContent: x.p, translate: false })); b.onclick = async () => { const head = await callMain('ide:githead', p.disk, x.p).catch(() => ({ text: '' })); if (p.files[x.p] === null) await readDisk(p, x.p); modal((b2, d2) => { b2.style.width = 'min(980px,96vw)'; b2.innerHTML = '<h3></h3>'; b2.firstChild.textContent = x.p; b2.append(Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: 'En rouge : le dernier commit · en vert : le fichier maintenant' })); diffView(b2, head.text, p.bin.has(x.p) ? '' : p.files[x.p] ?? ''); b2.append(mkB('Fermer', () => d2(1), 'acc')); }); }; l.append(b); });
+    st.files.forEach(x => { const b = document.createElement('button'); b.className = 'ide-pi'; const em = document.createElement('em'); em.textContent = x.st.trim() || '?'; b.title = { M: 'modifié', A: 'ajouté', D: 'supprimé', R: 'renommé', '?': 'nouveau' }[x.st.trim()[0]] || ''; b.append(em, Object.assign(document.createElement('span'), { textContent: x.p, translate: false })); b.onclick = async () => { const head = await callMain('ide:githead', p.disk, x.p).catch(() => ({ text: '' })); if (p.files[x.p] === null) await readDisk(p, x.p); modal((b2, d2) => { b2.style.width = 'min(980px,96vw)'; b2.innerHTML = '<h3></h3>'; b2.firstChild.textContent = x.p; b2.append(Object.assign(document.createElement('div'), { style: 'font-size:14px;color:var(--sub)', textContent: 'En rouge : le dernier commit · en vert : le fichier maintenant' })); diffView(b2, head.text, p.bin.has(x.p) ? '' : p.files[x.p] ?? ''); b2.append(mkB('Fermer', () => d2(1), 'acc')); }); }; l.append(b); });
     if (!st.files.length) l.append(Object.assign(document.createElement('div'), { className: 'ide-pi', textContent: 'Rien à valider : tout est déjà dans le dernier commit.' }));
     const msg = inputOf('Message du commit'), r = document.createElement('div'); r.className = 'ide-row';
     const go = async () => { saveProj(true); const c = await callMain('ide:commit', p.disk, msg.value).catch(e => ({ code: -1, err: e.message })); log(c.code === 0 ? 'sys' : 'error', ((c.out || '') + (c.err || '')).trim()); if (c.code === 0) { toast('Commit fait'); done(1); } };
     msg.onkeydown = e => { if (e.key === 'Enter' && msg.value.trim()) go(); };
     r.append(msg, mkB('Valider (commit)', () => msg.value.trim() ? go() : toast('Écris un message de commit.', true), 'acc'));
-    box.append(l, ...(st.files.length ? [r] : []), Object.assign(document.createElement('div'), { style: 'font-size:12px;color:var(--sub)', textContent: 'Pousser ou tirer : tape git push ou git pull dans le terminal de la console.' }), mkB('Fermer', () => done(1)));
+    box.append(l, ...(st.files.length ? [r] : []), Object.assign(document.createElement('div'), { style: 'font-size:14px;color:var(--sub)', textContent: 'Pousser ou tirer : tape git push ou git pull dans le terminal de la console.' }), mkB('Fermer', () => done(1)));
     setTimeout(() => msg.focus(), 30);
   }); };
   root.__ide = { diagnose, symbols, complete, md2html, lineDiff, matchBracket, get probs() { return probs; }, get proj() { return proj; }, acOpen, get ac() { return acItems.map(x => x.label); }, acAccept: k => acAccept(acItems[k]), createProject, selectFile, snap, histOf, openAny, loadDisk, addTestDir: async d => { await callMain('ide:testroot', d); const x = { key: 'dir-test', name: 'test', root: d }; meta.disks.push(x); addDiskProject(x); await openAny(x.key); }, shellRun, gitStatus: () => callMain('ide:git', proj.disk), ta, saveProj, renameWord, wordAt, closeDisk: delProject };

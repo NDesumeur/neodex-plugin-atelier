@@ -61,3 +61,8 @@ Your projects are stored by NeoDex, backed up and synced between your PCs when s
 ## Install
 
 In NeoDex: **NeoStore → Discover → Atelier → Install**.
+
+## Version 1.3.0
+
+- Larger interface text (files, tabs, console, status bar, dialogs).
+- Editor text size: 15 px by default, adjustable from 10 to 28 px with the A− and A+ buttons in the status bar (or Ctrl+= and Ctrl+-).

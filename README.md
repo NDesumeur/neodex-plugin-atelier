@@ -61,3 +61,8 @@ Tes projets sont enregistrés par NeoDex, sauvegardés et synchronisés entre te
 ## Installer
 
 Dans NeoDex : **NeoStore → À découvrir → Atelier → Installer**.
+
+## Version 1.3.0
+
+- Textes de l'interface plus grands (fichiers, onglets, console, barre d'état, fenêtres).
+- Taille du texte de l'éditeur : 15 px au départ, réglable de 10 à 28 px avec les boutons A− et A+ de la barre d'état (ou Ctrl+= et Ctrl+-).
