@@ -4,6 +4,10 @@ L'environnement de développement intégré à NeoDex : écris des pages web, de
 
 *English version: [README.en.md](README.en.md)*
 
+## Rechargement à chaud (nouveau en 1.4.0)
+
+Le plugin testé se relance à chaque modification en gardant ses données ; console.assert dans la console ; plus de fausse erreur sur export default async function.
+
 ## Les projets
 
 - La colonne de gauche liste tes **projets** et leurs fichiers, avec des dossiers. Crée, renomme ou supprime un fichier ; ouvre-en plusieurs dans des onglets.
@@ -49,6 +53,10 @@ L'Atelier n'a accès qu'aux dossiers que tu as choisis toi-même.
 4. **Exporter .zip** fabrique l'archive à joindre à une Release GitHub (topic `neodex-plugin`), avec une icône générée si tu n'en as pas.
 
 La publication elle-même (Release GitHub, signature et approbation) se fait en dehors de l'Atelier. Le [SDK NeoDex](https://github.com/NDesumeur/neodex-sdk) décrit tout ce qu'un plugin peut faire.
+
+## Rechargement à chaud (1.4.0)
+
+Pendant le test d’un plugin (▶), chaque modification de son code (JS, CSS, plugin.json) le relance tout seul une demi-seconde après la dernière touche, **avec ses données** : ce qu’il a écrit dans son dossier reste là. Tant que le fichier a une erreur de syntaxe, l’ancien reste affiché. ▶ repart de zéro (dossier vide). Le bouton **↻ À chaud** coupe ou remet le rechargement. `console.assert` s’affiche aussi dans la console quand l’assertion est fausse : pratique pour les vérifications internes d’un plugin. Le contrôle de syntaxe n’alerte plus à tort sur `export default async function (ctx)`.
 
 ## Sécurité
 

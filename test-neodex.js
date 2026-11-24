@@ -48,5 +48,13 @@ module.exports = async ({ pj, js, sleep }) => {
     await run(`(${I}.shellRun('echo coucou > note.txt').then(() => 0))`); await sleep(700);
     if (!await run(`'note.txt' in ${I}.proj.files`)) throw new Error('le terminal n\'a pas créé note.txt dans la liste');
   } finally { try { fs.rmSync(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 }); } catch {} }  // le terminal peut encore tenir le dossier un instant
-  return 'problèmes (JS, JSON, Python, HTML, CSS), plan, autocomplétion, Markdown, comparaison, historique, dossier du PC avec git et terminal ok';
+  // le rechargement à chaud : un plugin qui compte ses lancements dans son dossier ; ▶ puis une modification → il repart et garde ses données
+  await run(`(${I}.createProject({ name: 'Chaud', files: { 'plugin.json': JSON.stringify({ id: 'moi.chaud', name: 'Chaud', version: '1.0.0', type: 'app', entry: 'index.js', view: 'chaud', author: 'Jean Martin', description: 'Compte ses lancements pour le test.', neobase: '>=4.0.0', permissions: ['storage'] }, null, 2), 'index.js': "export default async function (ctx) {\\n  const n = ((await ctx.folder.read('n')) || 0) + 1;\\n  await ctx.folder.write('n', n);\\n  console.assert(n < 0, 'lancement', n);\\n}\\n" } }), 0)`); await sleep(300);
+  await run(`(() => { const b = document.querySelector('.ide-mod .ide-in'); if (b) { b.value = 'Chaud'; b.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); } return 0; })()`); await sleep(500);
+  await run(`(() => { const i = ${I}; i.selectFile('index.js'); i.testPlugin(); return 0; })()`); await sleep(1200);
+  const n1 = await run(`${I}.plugMem.n`), dbg = await run(`({ name: ${I}.proj?.name, keys: Object.keys(${I}.proj?.files || {}), mod: document.querySelector('.ide-mod')?.textContent?.slice(0, 200) })`);
+  await run(`(() => { const i = ${I}, ta = i.ta; ta.value = ta.value.replace('lancement', 'lancement n°'); ta.dispatchEvent(new InputEvent('input', {})); return 0; })()`); await sleep(1800);
+  const hot = await run(`({ n: ${I}.plugMem.n, log: ${I}.log, d: ${I}.diagnose('js', ${I}.proj.files['index.js']), act: ${I}.ta.value.slice(0, 60) })`);
+  if (n1 !== 1 || hot.n !== 2 || !/rechargé à chaud/.test(hot.log) || !/Assertion fausse/.test(hot.log)) throw new Error('rechargement à chaud : ' + JSON.stringify(dbg) + ' ' + n1 + ' → ' + JSON.stringify(hot));
+  return 'rechargement à chaud (données gardées, assertion dans la console) · problèmes (JS, JSON, Python, HTML, CSS), plan, autocomplétion, Markdown, comparaison, historique, dossier du PC avec git et terminal ok';
 };

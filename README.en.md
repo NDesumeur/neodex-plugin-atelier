@@ -4,6 +4,10 @@ The development environment built into NeoDex: write web pages, JavaScript or Py
 
 *Version française : [README.md](README.md)*
 
+## Hot reload (new in 1.4.0)
+
+The tested plugin restarts on every change and keeps its data; console.assert in the console; no more false error on export default async function.
+
 ## Projects
 
 - The left column lists your **projects** and their files, with folders. Create, rename or delete a file; open several in tabs.
@@ -49,6 +53,10 @@ The Workshop only reaches the folders you picked yourself.
 4. **Export .zip** builds the archive to attach to a GitHub Release (topic `neodex-plugin`), with a generated icon if you have none.
 
 Publishing itself (GitHub Release, signature and approval) happens outside the Workshop. The [NeoDex SDK](https://github.com/NDesumeur/neodex-sdk) describes everything a plugin can do.
+
+## Hot reload (1.4.0)
+
+While testing a plugin (▶), every change to its code (JS, CSS, plugin.json) restarts it by itself half a second after the last key, **with its data**: what it wrote in its folder stays. As long as the file has a syntax error, the old one stays shown. ▶ starts from scratch (empty folder). The **↻ Hot reload** button turns reloading off or on. `console.assert` also shows in the console when the assertion fails: handy for a plugin's self-checks. The syntax check no longer wrongly flags `export default async function (ctx)`.
 
 ## Security
 
